@@ -21,9 +21,11 @@ description: Please see the README on GitHub at <https://github.com/githubuser/l
 
 default-extensions:
   - AllowAmbiguousTypes
+  - BlockArguments
   - ConstraintKinds
   - DataKinds
   - DeriveGeneric
+  - ExtendedDefaultRules
   - FlexibleContexts
   - FlexibleInstances
   - FunctionalDependencies
@@ -47,8 +49,10 @@ default-extensions:
 
 dependencies:
   - base >= 4.7 && < 5
-  - relude
+  - diagnose
   - optics
+  - parsec
+  - relude
   - string-interpolate
   - witch
 
@@ -76,3 +80,7 @@ tests:
       - -with-rtsopts=-N
     dependencies:
       - lola
+      - tasty
+      - tasty-hunit
+      - tasty-quickcheck
+      - tasty-smallcheck
