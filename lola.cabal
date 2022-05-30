@@ -30,8 +30,37 @@ library
       Paths_lola
   hs-source-dirs:
       src
+  default-extensions:
+      AllowAmbiguousTypes
+      ConstraintKinds
+      DataKinds
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      MultiParamTypeClasses
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      QuasiQuotes
+      RankNTypes
+      StandaloneDeriving
+      StandaloneKindSignatures
+      TemplateHaskell
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      UndecidableInstances
   build-depends:
       base >=4.7 && <5
+    , optics
+    , relude
+    , string-interpolate
+    , witch
   default-language: Haskell2010
 
 executable lola-exe
@@ -40,10 +69,39 @@ executable lola-exe
       Paths_lola
   hs-source-dirs:
       app
+  default-extensions:
+      AllowAmbiguousTypes
+      ConstraintKinds
+      DataKinds
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      MultiParamTypeClasses
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      QuasiQuotes
+      RankNTypes
+      StandaloneDeriving
+      StandaloneKindSignatures
+      TemplateHaskell
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      UndecidableInstances
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , lola
+    , optics
+    , relude
+    , string-interpolate
+    , witch
   default-language: Haskell2010
 
 test-suite lola-test
@@ -53,8 +111,37 @@ test-suite lola-test
       Paths_lola
   hs-source-dirs:
       test
+  default-extensions:
+      AllowAmbiguousTypes
+      ConstraintKinds
+      DataKinds
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      MultiParamTypeClasses
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      QuasiQuotes
+      RankNTypes
+      StandaloneDeriving
+      StandaloneKindSignatures
+      TemplateHaskell
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      UndecidableInstances
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , lola
+    , optics
+    , relude
+    , string-interpolate
+    , witch
   default-language: Haskell2010
