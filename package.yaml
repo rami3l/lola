@@ -51,7 +51,7 @@ dependencies:
   - base >= 4.7 && < 5
   - diagnose
   - optics
-  - parsec
+  - megaparsec
   - relude
   - string-interpolate
   - witch

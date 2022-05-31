@@ -61,8 +61,8 @@ library
   build-depends:
       base >=4.7 && <5
     , diagnose
+    , megaparsec
     , optics
-    , parsec
     , relude
     , string-interpolate
     , witch
@@ -106,8 +106,8 @@ executable lola-exe
       base >=4.7 && <5
     , diagnose
     , lola
+    , megaparsec
     , optics
-    , parsec
     , relude
     , string-interpolate
     , witch
@@ -152,8 +152,8 @@ test-suite lola-test
       base >=4.7 && <5
     , diagnose
     , lola
+    , megaparsec
     , optics
-    , parsec
     , relude
     , string-interpolate
     , tasty
