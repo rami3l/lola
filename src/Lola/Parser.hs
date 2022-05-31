@@ -1,10 +1,12 @@
 module Lola.Parser () where
 
+import Data.String.Interpolate
+import qualified Data.Text as T
 import Optics (makeFieldLabels)
 import Optics.Operators
 import Relude
-import Text.Megaparsec (MonadParsec (notFollowedBy, try), Parsec, ParsecT, SourcePos, getSourcePos)
-import Text.Megaparsec.Char (alphaNumChar, space1, string)
+import Text.Megaparsec (MonadParsec (notFollowedBy, try), Parsec, ParsecT, SourcePos, getSourcePos, single)
+import Text.Megaparsec.Char (alphaNumChar, letterChar, space1, string)
 import qualified Text.Megaparsec.Char.Lexer as L
 
 keywords :: [Text] -- list of reserved words
@@ -47,7 +49,7 @@ data TokenType
   | GreaterEqual
   | Less
   | LessEqual
-  | Identifier
+  | Ident
   | StrLit
   | NumLit
   | And
@@ -149,7 +151,15 @@ true = rword True' "true"
 var = rword Var "var"
 while = rword While "while"
 
-identifier = undefined
+ident :: Parser Token
+ident = token Ident ident'
+  where
+    ident' = lexeme . try $ identStr >>= check . toText
+    identStr = (:) <$> letterChar <*> many (alphaNumChar <|> single '_')
+    check x =
+      if x `elem` keywords
+        then fail [i|keyword #{x} cannot be an identifier|]
+        else return x
 
 strLit = undefined
 
