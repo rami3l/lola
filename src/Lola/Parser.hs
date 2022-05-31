@@ -55,7 +55,7 @@ data TokenType
   | Class
   | Continue
   | Else
-  | False
+  | False'
   | Fun
   | For
   | If
@@ -65,7 +65,7 @@ data TokenType
   | Return
   | Super
   | This
-  | True
+  | True'
   | Var
   | While
   deriving (Show)
@@ -95,24 +95,62 @@ lexeme = L.lexeme space
 symbol :: Text -> Parser Text
 symbol = L.symbol space
 
+-- | Returns a 'Token' parser given a 'Text' parser to be mapped from and the expected 'TokenType'.
+token :: TokenType -> Parser Text -> Parser Token
+token tkType str = do
+  pos <- getSourcePos
+  str' <- str
+  return $ Token tkType str' pos
+
 -- | A reserved symbol in the Lox language.
 rsym :: TokenType -> Text -> Parser Token
-rsym tkType str = do
-  pos <- getSourcePos
-  str' <- symbol str
-  return $ Token tkType str' pos
+rsym tkType = token tkType . symbol
 
 -- | A reserved keyword in the Lox language.
 rword :: TokenType -> Text -> Parser Token
-rword tkType str = do
-  pos <- getSourcePos
-  str' <- lexeme . try $ string str <* notFollowedBy alphaNumChar
-  return $ Token tkType str' pos
+rword tkType str = token tkType rword'
+  where
+    rword' = lexeme . try $ string str <* notFollowedBy alphaNumChar
 
--- TODO: Refactor the two functions above.
-
-comma, dot, minus, plus :: Parser Token
+comma, dot, minus, plus, semicolon, slash, star, bang, bangEqual, equal, equalEqual, greater, greaterEqual, less, lessEqual :: Parser Token
 comma = rsym Comma ","
 dot = rsym Dot "."
 minus = rsym Minus "-"
 plus = rsym Plus "+"
+semicolon = rsym Semicolon ";"
+slash = rsym Slash "/"
+star = rsym Star "*"
+bang = rsym Bang "!"
+bangEqual = rsym BangEqual "!="
+equal = rsym Equal "="
+equalEqual = rsym EqualEqual "=="
+greater = rsym Greater ">"
+greaterEqual = rsym GreaterEqual ">="
+less = rsym Less "<"
+lessEqual = rsym LessEqual "<="
+
+and, break, class', continue, else', false, fun, for, if', nil, or, print, return', super, this, true, var, while :: Parser Token
+and = rword And "and"
+break = rword Break "break"
+class' = rword Class "class"
+continue = rword Continue "continue"
+else' = rword Else "else"
+false = rword False' "false"
+fun = rword Fun "fun"
+for = rword For "for"
+if' = rword If "if"
+nil = rword Nil "nil"
+or = rword Or "or"
+print = rword Print "print"
+return' = rword Return "return"
+super = rword Super "super"
+this = rword This "this"
+true = rword True' "true"
+var = rword Var "var"
+while = rword While "while"
+
+identifier = undefined
+
+strLit = undefined
+
+numLit = undefined
