@@ -9,9 +9,10 @@ import Data.Tuple.Optics
 import Optics (makeFieldLabels)
 import Optics.Operators
 import Relude
-import Text.Megaparsec (MonadParsec (notFollowedBy, try), Parsec, ParsecT, SourcePos (sourceColumn, sourceLine), choice, getSourcePos, manyTill, single, unPos)
+import Text.Megaparsec (MonadParsec (notFollowedBy, try), Parsec, ParsecT, SourcePos (sourceColumn, sourceLine), between, choice, getSourcePos, manyTill, single, unPos)
 import Text.Megaparsec.Char (alphaNumChar, char, letterChar, space1, string)
 import qualified Text.Megaparsec.Char.Lexer as L
+import Prelude (read)
 import qualified Prelude
 
 kws :: Bimap TokenType Text
@@ -115,11 +116,11 @@ makeFieldLabels ''Token
 type Parser :: Type -> Type
 type Parser = Parsec Void Text
 
--- | A no-op parser which successes directly.
-noop :: Parser ()
+noop, space :: Parser ()
+
+-- | A no-op parser which succeeds directly.
 noop = return ()
 
-space :: Parser ()
 space =
   L.space
     space1
@@ -149,16 +150,18 @@ rword tkType str = toTokenParser tkType rword'
 rsym :: TokenType -> Text -> Parser Token
 rsym tkType = toTokenParser tkType . symbol
 
-kw :: Map TokenType (Parser Token)
-kw = kws & Bimap.toMap & Map.mapWithKey rword
+kwMap, opMap :: Map TokenType (Parser Token)
+kwMap = kws & Bimap.toMap & Map.mapWithKey rword
+opMap = ops & Bimap.toMap & Map.mapWithKey rsym
 
-op :: Map TokenType (Parser Token)
-op = kws & Bimap.toMap & Map.mapWithKey rsym
+kw, op :: TokenType -> Parser Token
+kw = (kwMap Map.!)
+op = (opMap Map.!)
 
 ident :: Parser Token
 ident = toTokenParser TIdent ident'
   where
-    ident' = lexeme . try $ identStr >>= check . toText
+    ident' = lexeme . try $ check . toText =<< identStr
     identStr = (:) <$> letterChar <*> many (alphaNumChar <|> single '_')
     check str =
       if str `Bimap.memberR` kws
@@ -218,9 +221,16 @@ data Stmt
 primary :: Parser Expr
 primary =
   choice
-    [ kw Map.! TTrue $> ELiteral (LBool True),
-      kw Map.! TFalse $> ELiteral (LBool False),
-      kw Map.! TNil $> ELiteral LNil,
-      kw Map.! TThis <&> EThis
-      -- TODO: Implement other cases.
+    [ kw TTrue $> ELiteral (LBool True),
+      kw TFalse $> ELiteral (LBool False),
+      kw TNil $> ELiteral LNil,
+      kw TThis <&> EThis,
+      numLit <&> ELiteral . LNum . read . toString . tokenLexeme,
+      strLit <&> ELiteral . LStr . tokenLexeme,
+      ident <&> EVariable,
+      between (char '(') (char ')') expression <&> EGrouping,
+      ((,) <$> kw TSuper <*> (op TDot *> ident)) <&> uncurry ESuper
     ]
+
+expression :: Parser Expr
+expression = undefined
