@@ -1,5 +1,8 @@
 module Lola.Parser () where
 
+import Data.Bimap (Bimap)
+import qualified Data.Bimap as Bimap
+import qualified Data.Map.Strict as Map
 import Data.String.Interpolate
 import qualified Data.Text as T
 import Optics (makeFieldLabels)
@@ -9,29 +12,50 @@ import Text.Megaparsec (MonadParsec (notFollowedBy, try), Parsec, ParsecT, Sourc
 import Text.Megaparsec.Char (alphaNumChar, letterChar, space1, string)
 import qualified Text.Megaparsec.Char.Lexer as L
 
-keywords :: [Text] -- list of reserved words
-keywords =
-  [ -- Regular keywords.
-    "break",
-    "class",
-    "continue",
-    "else",
-    "false",
-    "fun",
-    "for",
-    "if",
-    "nil",
-    "print",
-    "return",
-    "super",
-    "this",
-    "true",
-    "var",
-    "while",
-    -- Keyword operators.
-    "and",
-    "or"
-  ]
+kws :: Bimap TokenType Text
+kws =
+  fromList
+    [ -- Regular keywords.
+      (Break, "break"),
+      (Class, "class"),
+      (Continue, "continue"),
+      (Else, "else"),
+      (False', "false"),
+      (Fun, "fun"),
+      (For, "for"),
+      (If, "if"),
+      (Nil, "nil"),
+      (Print, "print"),
+      (Return, "return"),
+      (Super, "super"),
+      (This, "this"),
+      (True', "true"),
+      (Var, "var"),
+      (While, "while"),
+      -- Keyword operators.
+      (And, "and"),
+      (Or, "or")
+    ]
+
+ops :: Bimap TokenType Text
+ops =
+  fromList
+    [ (Comma, ","),
+      (Dot, "."),
+      (Minus, "-"),
+      (Plus, "+"),
+      (Semicolon, ";"),
+      (Slash, "/"),
+      (Star, "*"),
+      (Bang, "!"),
+      (BangEqual, "!="),
+      (Equal, "="),
+      (EqualEqual, "=="),
+      (Greater, ">"),
+      (GreaterEqual, ">="),
+      (Less, "<"),
+      (LessEqual, "<=")
+    ]
 
 data TokenType
   = Comma
@@ -70,7 +94,7 @@ data TokenType
   | True'
   | Var
   | While
-  deriving (Show)
+  deriving (Show, Ord, Eq)
 
 data Token = Token
   { tokenType :: TokenType,
@@ -114,52 +138,21 @@ rword tkType str = token tkType rword'
   where
     rword' = lexeme . try $ string str <* notFollowedBy alphaNumChar
 
-comma, dot, minus, plus, semicolon, slash, star, bang, bangEqual, equal, equalEqual, greater, greaterEqual, less, lessEqual :: Parser Token
-comma = rsym Comma ","
-dot = rsym Dot "."
-minus = rsym Minus "-"
-plus = rsym Plus "+"
-semicolon = rsym Semicolon ";"
-slash = rsym Slash "/"
-star = rsym Star "*"
-bang = rsym Bang "!"
-bangEqual = rsym BangEqual "!="
-equal = rsym Equal "="
-equalEqual = rsym EqualEqual "=="
-greater = rsym Greater ">"
-greaterEqual = rsym GreaterEqual ">="
-less = rsym Less "<"
-lessEqual = rsym LessEqual "<="
+kwParsers :: Map TokenType (Parser Token)
+kwParsers = kws & Bimap.toMap & Map.mapWithKey rword
 
-and, break, class', continue, else', false, fun, for, if', nil, or, print, return', super, this, true, var, while :: Parser Token
-and = rword And "and"
-break = rword Break "break"
-class' = rword Class "class"
-continue = rword Continue "continue"
-else' = rword Else "else"
-false = rword False' "false"
-fun = rword Fun "fun"
-for = rword For "for"
-if' = rword If "if"
-nil = rword Nil "nil"
-or = rword Or "or"
-print = rword Print "print"
-return' = rword Return "return"
-super = rword Super "super"
-this = rword This "this"
-true = rword True' "true"
-var = rword Var "var"
-while = rword While "while"
+opParsers :: Map TokenType (Parser Token)
+opParsers = kws & Bimap.toMap & Map.mapWithKey rsym
 
 ident :: Parser Token
 ident = token Ident ident'
   where
     ident' = lexeme . try $ identStr >>= check . toText
     identStr = (:) <$> letterChar <*> many (alphaNumChar <|> single '_')
-    check x =
-      if x `elem` keywords
-        then fail [i|keyword #{x} cannot be an identifier|]
-        else return x
+    check str =
+      if str `Bimap.memberR` kws
+        then fail [i|keyword #{str} cannot be an identifier|]
+        else return str
 
 strLit = undefined
 
