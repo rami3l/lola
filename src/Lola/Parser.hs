@@ -8,8 +8,8 @@ import qualified Data.Text as T
 import Optics (makeFieldLabels)
 import Optics.Operators
 import Relude
-import Text.Megaparsec (MonadParsec (notFollowedBy, try), Parsec, ParsecT, SourcePos, getSourcePos, single)
-import Text.Megaparsec.Char (alphaNumChar, letterChar, space1, string)
+import Text.Megaparsec (MonadParsec (notFollowedBy, try), Parsec, ParsecT, SourcePos, getSourcePos, manyTill, single)
+import Text.Megaparsec.Char (alphaNumChar, char, letterChar, space1, string)
 import qualified Text.Megaparsec.Char.Lexer as L
 
 kws :: Bimap TokenType Text
@@ -142,7 +142,7 @@ kwParsers :: Map TokenType (Parser Token)
 kwParsers = kws & Bimap.toMap & Map.mapWithKey rword
 
 opParsers :: Map TokenType (Parser Token)
-opParsers = kws & Bimap.toMap & Map.mapWithKey rsym
+opParsers = ops & Bimap.toMap & Map.mapWithKey rsym
 
 ident :: Parser Token
 ident = token Ident ident'
@@ -154,6 +154,10 @@ ident = token Ident ident'
         then fail [i|keyword #{str} cannot be an identifier|]
         else return str
 
-strLit = undefined
+strLit :: Parser Token
+strLit = token StrLit $ toText <$> (doubleQuote >> L.charLiteral `manyTill` doubleQuote)
+  where
+    doubleQuote = char '"'
 
-numLit = undefined
+numLit :: Parser Token
+numLit = token NumLit $ show <$> L.signed space L.float
