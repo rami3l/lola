@@ -4,13 +4,27 @@ import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import qualified Data.Map.Strict as Map
 import Data.String.Interpolate
-import qualified Data.Text as T
-import Data.Tuple.Optics
 import Optics (makeFieldLabels)
-import Optics.Operators
 import Relude
-import Text.Megaparsec (MonadParsec (notFollowedBy, try), Parsec, ParsecT, SourcePos (sourceColumn, sourceLine), between, choice, getSourcePos, manyTill, sepBy, single, unPos)
-import Text.Megaparsec.Char (alphaNumChar, char, letterChar, space1, string)
+import Text.Megaparsec
+  ( MonadParsec (notFollowedBy, try),
+    Parsec,
+    SourcePos,
+    between,
+    choice,
+    getSourcePos,
+    manyTill,
+    option,
+    sepBy,
+    single,
+  )
+import Text.Megaparsec.Char
+  ( alphaNumChar,
+    char,
+    letterChar,
+    space1,
+    string,
+  )
 import qualified Text.Megaparsec.Char.Lexer as L
 import Prelude (read)
 import qualified Prelude
@@ -179,8 +193,8 @@ strLit = toTokenParser TStrLit $ toText <$> (doubleQuote >> L.charLiteral `manyT
     doubleQuote = char '"'
 
 floatLit, decimalLit, numLit :: Parser Token
-floatLit = toTokenParser TNumLit $ show <$> L.signed noop L.float
-decimalLit = toTokenParser TNumLit $ show <$> L.signed noop L.decimal
+floatLit = toTokenParser TNumLit $ show @_ @Double <$> L.signed noop L.float
+decimalLit = toTokenParser TNumLit $ show @_ @Integer <$> L.signed noop L.decimal
 numLit = lexeme $ try floatLit <|> decimalLit
 
 data Lit
@@ -244,11 +258,11 @@ primary =
 call :: Parser Expr
 call = do
   c <- primary
-  choice [go c, return c]
+  go c & option c
   where
     go c = do
       c' <- choice [goArgs, goGet]
-      choice [go c', return c']
+      go c' & option c'
       where
         goArgs = ((,) <$> (op TLParen *> args) <*> op TRParen) <&> uncurry (ECall c)
         goGet = op TDot *> ident <&> EGet c
@@ -259,7 +273,7 @@ expression = call -- TODO: To be finished
 
 instance Prelude.Show Expr where
   show (EAssign name val) = [i|(assign! #{name} #{val})|]
-  show (EBinary lhs op rhs) = [i|(#{op} #{lhs} #{rhs})|]
+  show (EBinary lhs op' rhs) = [i|(#{op'} #{lhs} #{rhs})|]
   show (ECall callee args _)
     | null args = [i|(#{callee})|]
     | otherwise = [i|(#{callee} #{intercalateS args})|]
@@ -269,11 +283,11 @@ instance Prelude.Show Expr where
     let body' = if null body then "'()" else intercalateS body
      in [i|(λ (#{intercalateS params}) #{body'})|]
   show (ELiteral lit) = show lit
-  show (ELogical lhs op rhs) = [i|(#{op} #{lhs} #{rhs})|]
+  show (ELogical lhs op' rhs) = [i|(#{op'} #{lhs} #{rhs})|]
   show (ESet obj name to) = [i|(.set! #{obj} #{name} #{to})|]
   show (ESuper method _) = [i|(. (super) #{method})|]
   show (EThis _) = "(this)"
-  show (EUnary op rhs) = [i|(#{op} #{rhs})|]
+  show (EUnary op' rhs) = [i|(#{op'} #{rhs})|]
   show (EVariable var) = var & tokenLexeme & toString
 
 intercalateS :: Show a => [a] -> String

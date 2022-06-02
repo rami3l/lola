@@ -59,6 +59,7 @@ library
       TypeFamilies
       TypeOperators
       UndecidableInstances
+  ghc-options: -Wall
   build-depends:
       base >=4.7 && <5
     , bimap
@@ -104,7 +105,7 @@ executable lola-exe
       TypeFamilies
       TypeOperators
       UndecidableInstances
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , bimap
@@ -152,7 +153,7 @@ test-suite lola-test
       TypeFamilies
       TypeOperators
       UndecidableInstances
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , bimap
