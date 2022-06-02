@@ -9,7 +9,7 @@ import Data.Tuple.Optics
 import Optics (makeFieldLabels)
 import Optics.Operators
 import Relude
-import Text.Megaparsec (MonadParsec (notFollowedBy, try), Parsec, ParsecT, SourcePos (sourceColumn, sourceLine), between, choice, getSourcePos, manyTill, single, unPos)
+import Text.Megaparsec (MonadParsec (notFollowedBy, try), Parsec, ParsecT, SourcePos (sourceColumn, sourceLine), between, choice, getSourcePos, manyTill, sepBy, single, unPos)
 import Text.Megaparsec.Char (alphaNumChar, char, letterChar, space1, string)
 import qualified Text.Megaparsec.Char.Lexer as L
 import Prelude (read)
@@ -43,7 +43,11 @@ kws =
 ops :: Bimap TokenType Text
 ops =
   fromList
-    [ (TComma, ","),
+    [ (TLParen, "("),
+      (TRParen, ")"),
+      (TLBrace, "{"),
+      (TRBrace, "}"),
+      (TComma, ","),
       (TDot, "."),
       (TMinus, "-"),
       (TPlus, "+"),
@@ -61,7 +65,11 @@ ops =
     ]
 
 data TokenType
-  = TComma
+  = TLParen
+  | TRParen
+  | TLBrace
+  | TRBrace
+  | TComma
   | TDot
   | TMinus
   | TPlus
@@ -106,12 +114,9 @@ data Token = Token
   }
   deriving (Eq)
 
-instance Prelude.Show Token where
-  show (Token ty str pos) = [i|`#{str}`::#{ty}@#{(ln, col)}|]
-    where
-      (ln, col) = (pos ^. #sourceLine & unPos, pos ^. #sourceColumn & unPos)
-
 makeFieldLabels ''Token
+
+instance Prelude.Show Token where show = toString . tokenLexeme
 
 type Parser :: Type -> Type
 type Parser = Parsec Void Text
@@ -183,7 +188,12 @@ data Lit
   | LBool Bool
   | LNum Double
   | LStr Text
-  deriving (Show)
+
+instance Prelude.Show Lit where
+  show LNil = "nil"
+  show (LBool b) = show b
+  show (LNum n) = show n
+  show (LStr s) = show s
 
 data Expr
   = EAssign {assignName :: Token, assignVal :: Expr}
@@ -199,7 +209,6 @@ data Expr
   | EThis Token
   | EUnary {unOp :: Token, rhs :: Expr}
   | EVariable Token
-  deriving (Show)
 
 data Stmt
   = SBlock [Stmt]
@@ -228,9 +237,48 @@ primary =
       numLit <&> ELiteral . LNum . read . toString . tokenLexeme,
       strLit <&> ELiteral . LStr . tokenLexeme,
       ident <&> EVariable,
-      between (char '(') (char ')') expression <&> EGrouping,
+      between (op TLParen) (op TRParen) expression <&> EGrouping,
       ((,) <$> kw TSuper <*> (op TDot *> ident)) <&> uncurry ESuper
     ]
 
+call :: Parser Expr
+call = do
+  c <- primary
+  choice [go c, return c]
+  where
+    go c = do
+      c' <- choice [goArgs, goGet]
+      choice [go c', return c']
+      where
+        goArgs = ((,) <$> (op TLParen *> args) <*> op TRParen) <&> uncurry (ECall c)
+        goGet = op TDot *> ident <&> EGet c
+        args = expression `sepBy` op TComma
+
 expression :: Parser Expr
-expression = undefined
+expression = call -- TODO: To be finished
+
+instance Prelude.Show Expr where
+  show (EAssign name val) = [i|(assign! #{name} #{val})|]
+  show (EBinary lhs op rhs) = [i|(#{op} #{lhs} #{rhs})|]
+  show (ECall callee args _)
+    | null args = [i|(#{callee})|]
+    | otherwise = [i|(#{callee} #{intercalateS args})|]
+  show (EGet obj name) = [i|(. #{obj} #{name})|]
+  show (EGrouping inner) = show inner
+  show (ELambda params body) =
+    let body' = if null body then "'()" else intercalateS body
+     in [i|(λ (#{intercalateS params}) #{body'})|]
+  show (ELiteral lit) = show lit
+  show (ELogical lhs op rhs) = [i|(#{op} #{lhs} #{rhs})|]
+  show (ESet obj name to) = [i|(.set! #{obj} #{name} #{to})|]
+  show (ESuper method _) = [i|(. (super) #{method})|]
+  show (EThis _) = "(this)"
+  show (EUnary op rhs) = [i|(#{op} #{rhs})|]
+  show (EVariable var) = var & tokenLexeme & toString
+
+intercalateS :: Show a => [a] -> String
+intercalateS = intercalate " " . fmap show
+
+showLisp :: Show a => [a] -> String
+showLisp [] = "'()"
+showLisp ts = "(" <> intercalateS ts <> ")"

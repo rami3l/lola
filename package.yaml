@@ -42,6 +42,7 @@ default-extensions:
   - StandaloneDeriving
   - StandaloneKindSignatures
   - TemplateHaskell
+  - TupleSections
   - TypeApplications
   - TypeFamilies
   - TypeOperators

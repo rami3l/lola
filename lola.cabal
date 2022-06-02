@@ -54,6 +54,7 @@ library
       StandaloneDeriving
       StandaloneKindSignatures
       TemplateHaskell
+      TupleSections
       TypeApplications
       TypeFamilies
       TypeOperators
@@ -98,6 +99,7 @@ executable lola-exe
       StandaloneDeriving
       StandaloneKindSignatures
       TemplateHaskell
+      TupleSections
       TypeApplications
       TypeFamilies
       TypeOperators
@@ -145,6 +147,7 @@ test-suite lola-test
       StandaloneDeriving
       StandaloneKindSignatures
       TemplateHaskell
+      TupleSections
       TypeApplications
       TypeFamilies
       TypeOperators
