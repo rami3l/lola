@@ -31,6 +31,7 @@ default-extensions:
   - FunctionalDependencies
   - GADTs
   - MultiParamTypeClasses
+  - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude # https://github.com/commercialhaskell/stack/issues/5077
   - OverloadedLabels
@@ -52,8 +53,9 @@ dependencies:
   - base >= 4.7 && < 5
   - bimap
   - diagnose
-  - optics
+  - extra
   - megaparsec
+  - optics
   - relude
   - string-interpolate
   - witch

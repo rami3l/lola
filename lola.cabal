@@ -43,6 +43,7 @@ library
       FunctionalDependencies
       GADTs
       MultiParamTypeClasses
+      MultiWayIf
       NamedFieldPuns
       NoImplicitPrelude
       OverloadedLabels
@@ -64,6 +65,7 @@ library
       base >=4.7 && <5
     , bimap
     , diagnose
+    , extra
     , megaparsec
     , optics
     , relude
@@ -89,6 +91,7 @@ executable lola-exe
       FunctionalDependencies
       GADTs
       MultiParamTypeClasses
+      MultiWayIf
       NamedFieldPuns
       NoImplicitPrelude
       OverloadedLabels
@@ -110,6 +113,7 @@ executable lola-exe
       base >=4.7 && <5
     , bimap
     , diagnose
+    , extra
     , lola
     , megaparsec
     , optics
@@ -137,6 +141,7 @@ test-suite lola-test
       FunctionalDependencies
       GADTs
       MultiParamTypeClasses
+      MultiWayIf
       NamedFieldPuns
       NoImplicitPrelude
       OverloadedLabels
@@ -158,6 +163,7 @@ test-suite lola-test
       base >=4.7 && <5
     , bimap
     , diagnose
+    , extra
     , lola
     , megaparsec
     , optics

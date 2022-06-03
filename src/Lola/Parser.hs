@@ -193,8 +193,8 @@ strLit = toTokenParser TStrLit $ toText <$> (doubleQuote >> L.charLiteral `manyT
     doubleQuote = char '"'
 
 floatLit, decimalLit, numLit :: Parser Token
-floatLit = toTokenParser TNumLit $ show @_ @Double <$> L.signed noop L.float
-decimalLit = toTokenParser TNumLit $ show @_ @Integer <$> L.signed noop L.decimal
+floatLit = toTokenParser TNumLit $ show @_ @Double <$> L.float
+decimalLit = toTokenParser TNumLit $ show @_ @Integer <$> L.decimal
 numLit = lexeme $ try floatLit <|> decimalLit
 
 data Lit
@@ -251,25 +251,46 @@ primary =
       numLit <&> ELiteral . LNum . read . toString . tokenLexeme,
       strLit <&> ELiteral . LStr . tokenLexeme,
       ident <&> EVariable,
-      between (op TLParen) (op TRParen) expression <&> EGrouping,
-      ((,) <$> kw TSuper <*> (op TDot *> ident)) <&> uncurry ESuper
+      expression & between (op TLParen) (op TRParen) <&> EGrouping,
+      ESuper <$> kw TSuper <*> (op TDot *> ident)
     ]
 
-call :: Parser Expr
-call = do
-  c <- primary
-  go c & option c
+toBinParser :: Parser Expr -> (Expr -> Parser Expr) -> Parser Expr
+toBinParser car cdr = do c <- car; go c & option c
   where
-    go c = do
-      c' <- choice [goArgs, goGet]
-      go c' & option c'
-      where
-        goArgs = ((,) <$> (op TLParen *> args) <*> op TRParen) <&> uncurry (ECall c)
-        goGet = op TDot *> ident <&> EGet c
-        args = expression `sepBy` op TComma
+    go c = do c' <- cdr c; go c' & option c'
+
+call :: Parser Expr
+call = toBinParser primary \c -> goArgs c <|> goGet c
+  where
+    goArgs c = ECall c <$> (op TLParen *> args) <*> op TRParen
+    goGet c = op TDot *> ident <&> EGet c
+    args = expression `sepBy` op TComma
+
+unary, factor, term, comparison, equality, logicAnd, logicOr :: Parser Expr
+unary = (EUnary <$> (op TBang <|> op TMinus) <*> unary) <|> call
+factor = toBinParser unary \c ->
+  EBinary c <$> (op TSlash <|> op TStar) <*> unary
+term = toBinParser factor \c ->
+  EBinary c <$> (op TMinus <|> op TPlus) <*> factor
+comparison = toBinParser term \c ->
+  EBinary c
+    <$> (op TGreater <|> op TGreaterEqual <|> op TLess <|> op TLessEqual)
+    <*> term
+equality = toBinParser comparison \c ->
+  EBinary c <$> (op TBangEqual <|> op TEqualEqual) <*> comparison
+logicAnd = toBinParser equality \c -> EBinary c <$> kw TAnd <*> equality
+logicOr = toBinParser logicAnd \c -> EBinary c <$> kw TOr <*> logicAnd
 
 expression :: Parser Expr
-expression = call -- TODO: To be finished
+expression = do
+  lhs' <- logicOr
+  option lhs' do
+    rhs' <- op TEqual *> expression -- Assignment expression detected.
+    case lhs' of
+      EVariable name -> return $ EAssign name rhs'
+      EGet obj name -> return $ ESet obj name rhs'
+      _ -> fail "Error while parsing an Assignment Expression: can only assign to a variable"
 
 instance Prelude.Show Expr where
   show (EAssign name val) = [i|(assign! #{name} #{val})|]
