@@ -80,12 +80,12 @@ ops =
       (TStar, "*"),
       (TBang, "!"),
       (TBangEqual, "!="),
-      (TEqual, "="),
       (TEqualEqual, "=="),
-      (TGreater, ">"),
+      (TEqual, "="),
       (TGreaterEqual, ">="),
-      (TLess, "<"),
-      (TLessEqual, "<=")
+      (TGreater, ">"),
+      (TLessEqual, "<="),
+      (TLess, "<")
     ]
 
 data TokenType
@@ -287,7 +287,7 @@ term = toBinParser factor \c ->
   EBinary c <$> (op TMinus <|> op TPlus) <*> factor
 comparison = toBinParser term \c ->
   EBinary c
-    <$> (op TGreater <|> op TGreaterEqual <|> op TLess <|> op TLessEqual)
+    <$> (op TGreaterEqual <|> op TGreater <|> op TLessEqual <|> op TLess)
     <*> term
 equality = toBinParser comparison \c ->
   EBinary c <$> (op TBangEqual <|> op TEqualEqual) <*> comparison
@@ -318,7 +318,7 @@ instance Prelude.Show Expr where
   show (ELiteral lit) = show lit
   show (ELogical lhs op' rhs) = [i|(#{op'} #{lhs} #{rhs})|]
   show (ESet obj name to) = [i|(.set! #{obj} #{name} #{to})|]
-  show (ESuper method _) = [i|(. (super) #{method})|]
+  show (ESuper _ method) = [i|(. (super) #{method})|]
   show (EThis _) = "(this)"
   show (EUnary op' rhs) = [i|(#{op'} #{rhs})|]
   show (EVariable var) = var & tokenLexeme & toString
