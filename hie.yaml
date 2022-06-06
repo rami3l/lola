@@ -1,2 +1,8 @@
 cradle:
   stack:
+    - path: "./app"
+      component: "lola:exe:lola-exe"
+    - path: "./src"
+      component: "lola:lib"
+    - path: "./test"
+      component: "lola:test:lola-test"

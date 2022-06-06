@@ -1,13 +1,12 @@
 module Tests.Parser where
 
-import Data.Bifunctor (first)
 import Data.String.Interpolate
 import Lola.Parser (ParserErrorBundle, expression)
 import Relude
-import Test.Tasty
-import Test.Tasty.HUnit
-import Tests.Common
-import Text.Megaparsec
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (Assertion, testCase, (@?), (@?=))
+import Tests.Common (assertRegexMatch)
+import Text.Megaparsec (errorBundlePretty, parse)
 
 parseExpr :: Text -> Either ParserErrorBundle Text
 parseExpr got = show <$> parse expression "" got
