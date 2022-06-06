@@ -1,4 +1,13 @@
-module Lola.Parser () where
+module Lola.Parser
+  ( Expr,
+    Parser,
+    ParserErrorBundle,
+    Stmt,
+    Token,
+    TokenType,
+    expression,
+  )
+where
 
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
@@ -8,6 +17,7 @@ import Optics (makeFieldLabels)
 import Relude
 import Text.Megaparsec
   ( MonadParsec (notFollowedBy, try),
+    ParseErrorBundle,
     Parsec,
     SourcePos,
     between,
@@ -132,14 +142,16 @@ makeFieldLabels ''Token
 
 instance Prelude.Show Token where show = toString . tokenLexeme
 
+type ParserError = Void
+
+type ParserStream = Text
+
 type Parser :: Type -> Type
-type Parser = Parsec Void Text
+type Parser = Parsec ParserError ParserStream
 
-noop, space :: Parser ()
+type ParserErrorBundle = ParseErrorBundle ParserStream ParserError
 
--- | A no-op parser which succeeds directly.
-noop = return ()
-
+space :: Parser ()
 space =
   L.space
     space1

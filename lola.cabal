@@ -126,6 +126,8 @@ test-suite lola-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Tests.Common
+      Tests.Parser
       Paths_lola
   hs-source-dirs:
       test
@@ -159,6 +161,8 @@ test-suite lola-test
       TypeOperators
       UndecidableInstances
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-tool-depends:
+      tasty-discover:tasty-discover
   build-depends:
       base >=4.7 && <5
     , bimap
@@ -167,6 +171,7 @@ test-suite lola-test
     , lola
     , megaparsec
     , optics
+    , regex-compat
     , relude
     , string-interpolate
     , tasty
