@@ -1,10 +1,10 @@
 module Tests.Parser where
 
 import Data.String.Interpolate
-import Lola.Parser (ParserErrorBundle, expression)
+import Lola.Parser (expression)
 import Relude
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, assertEqual, testCase, (@?), (@?=))
+import Test.Tasty.HUnit (Assertion, testCase, (@?), (@?=))
 import Tests.Common (assertRegexMatch)
 import Text.Megaparsec (errorBundlePretty, parse)
 

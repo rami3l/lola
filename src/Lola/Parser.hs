@@ -200,7 +200,7 @@ ident = toTokenParser TIdent ident'
         else return str
 
 strLit :: Parser Token
-strLit = toTokenParser TStrLit $ toText <$> (doubleQuote >> L.charLiteral `manyTill` doubleQuote)
+strLit = toTokenParser TStrLit $ toText <$> (doubleQuote *> L.charLiteral `manyTill` doubleQuote)
   where
     doubleQuote = char '"'
 
@@ -238,20 +238,25 @@ data Expr
 
 data Stmt
   = SBlock [Stmt]
-  | SClass {className :: Token, classSuper :: Maybe Expr, classMethods :: [Stmt]}
+  | SClass
+      { className :: Token,
+        -- | Note: This field /must/ contain an instance of 'EVariable'.
+        classSuper :: Maybe Expr,
+        -- | Note: This field /must/ only contain instances of 'SFunDecl'
+        classMethods :: [Stmt]
+      }
   | SExpr Expr
-  | SFun {funName :: Token, funParams :: [Token], funBody :: [Stmt]}
+  | SFunDecl {funName :: Token, funParams :: [Token], funBody :: [Stmt]}
   | SIf {ifCond :: Expr, ifThen :: Stmt, ifElse :: Maybe Stmt}
   | SJump Token
   | SPrint Expr
   | SReturn {returnKw :: Token, returnVal :: Maybe Expr}
   | SVarDecl {varName :: Token, varInit :: Maybe Expr}
   | SWhile {whileCond :: Expr, whileBody :: Stmt}
-  deriving (Show)
-
--- TODO: Implement proper printing for the types above.
 
 -- Grammar reference: https://craftinginterpreters.com/appendix-i.html
+
+-- Expressions:
 
 primary :: Parser Expr
 primary =
@@ -304,6 +309,53 @@ expression = do
       EGet obj name -> return $ ESet obj name rhs'
       _ -> fail "Error while parsing an Assignment Expression: can only assign to a variable"
 
+-- Statements (and Declarations):
+
+exprStmt, forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt, block :: Parser Stmt
+exprStmt = expression <* op TSemicolon <&> SExpr
+-- for (init; cond; incr) body => { init; while (cond) { body incr; } }
+forStmt = do
+  init' <-
+    ((varDecl <|> exprStmt) <&> Just) <|> (op TSemicolon $> Nothing)
+      & between (kw TFor *> op TLBrace) (op TSemicolon)
+  cond <- optional expression <* op TSemicolon
+  incr <- optional expression <* op TRBrace
+  body <- statement
+  let body' = SBlock . catMaybes $ [Just body, SExpr <$> incr]
+  let while' = SWhile (cond & fromMaybe (ELiteral $ LBool True)) body'
+  return . SBlock . catMaybes $ [init', Just while']
+ifStmt =
+  SIf
+    <$> (kw TIf *> (expression & between (op TLParen) (op TRParen)))
+    <*> statement
+    <*> optional (kw TElse *> statement)
+jumpStmt = expression & between (kw TBreak <|> kw TContinue) (op TSemicolon) <&> SPrint
+printStmt = expression & between (kw TPrint) (op TSemicolon) <&> SPrint
+returnStmt = SReturn <$> kw TReturn <*> (optional expression <* op TSemicolon)
+whileStmt = between (kw TWhile) (op TSemicolon) $ SWhile <$> expression <*> statement
+block = SBlock <$> rawBlock
+
+rawBlock :: Parser [Stmt]
+rawBlock = op TLBrace *> declaration `manyTill` op TRBrace
+
+statement :: Parser Stmt
+statement = choice [exprStmt, forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt, block]
+
+classDecl, funDecl, varDecl, rawFunDecl :: Parser Stmt
+classDecl =
+  SClass
+    <$> (kw TClass *> ident)
+    <*> optional (op TLess *> ident <&> EVariable)
+    <*> between (op TLBrace) (op TRBrace) (many rawFunDecl)
+funDecl = kw TFun *> rawFunDecl
+varDecl =
+  between (kw TVar) (op TSemicolon) $
+    SVarDecl <$> ident <*> optional (op TEqual *> expression)
+rawFunDecl = SFunDecl <$> ident <*> ident `sepBy` op TComma <*> rawBlock
+
+declaration :: Parser Stmt
+declaration = choice [classDecl, funDecl, varDecl, statement]
+
 instance Prelude.Show Expr where
   show (EAssign name val) = [i|(assign! #{name} #{val})|]
   show (EBinary lhs op' rhs) = [i|(#{op'} #{lhs} #{rhs})|]
@@ -323,9 +375,27 @@ instance Prelude.Show Expr where
   show (EUnary op' rhs) = [i|(#{op'} #{rhs})|]
   show (EVariable var) = var & tokenLexeme & toString
 
-intercalateS :: Show a => [a] -> String
-intercalateS = intercalate " " . fmap show
+instance Prelude.Show Stmt where
+  show (SBlock stmts) = [i|(begin #{intercalateS' stmts})|]
+  show (SClass name super methods) =
+    let super' = super & foldMap \s -> [i| (<: #{s})|] :: Text
+     in [i|(class #{name}#{super'} (#{intercalateS methods}))|]
+  show (SExpr ex) = show ex
+  show (SFunDecl name params body) = [i|(fun #{name} (#{intercalateS params}) #{intercalateS' body})|]
+  show (SIf cond then' else') =
+    let else'' = else' & foldMap \s -> [i| #{s}|] :: Text
+     in [i|(if #{cond} #{then'}#{else''})|]
+  show (SJump kw') = [i|(#{kw'})|]
+  show (SPrint ex) = [i|(print #{ex})|]
+  show (SReturn kw' ex) =
+    let ex' = ex & foldMap \s -> [i| #{s}|] :: Text
+     in [i|(#{kw'}#{ex'})|]
+  show (SVarDecl name ex) =
+    let ex' = ex & foldMap \s -> [i| #{s}|] :: Text
+     in [i|(var #{name}#{ex'})|]
+  show (SWhile cond body) = [i|(while #{cond}#{body})|]
 
-showLisp :: Show a => [a] -> String
-showLisp [] = "'()"
-showLisp ts = "(" <> intercalateS ts <> ")"
+intercalateS, intercalateS' :: Show a => [a] -> String
+intercalateS = intercalate " " . fmap show
+intercalateS' [] = "'()"
+intercalateS' ts = intercalateS ts
