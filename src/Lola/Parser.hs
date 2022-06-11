@@ -6,17 +6,19 @@ module Lola.Parser
     Token,
     TokenType,
     expression,
+    program,
   )
 where
 
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
+import Data.Char (toLower)
 import qualified Data.Map.Strict as Map
 import Data.String.Interpolate
 import Optics (makeFieldLabels)
 import Relude
 import Text.Megaparsec
-  ( MonadParsec (notFollowedBy, try),
+  ( MonadParsec (label, notFollowedBy, try),
     ParseErrorBundle,
     Parsec,
     SourcePos,
@@ -27,6 +29,7 @@ import Text.Megaparsec
     option,
     sepBy,
     single,
+    (<?>),
   )
 import Text.Megaparsec.Char
   ( alphaNumChar,
@@ -190,13 +193,13 @@ kw = (kwMap Map.!)
 op = (opMap Map.!)
 
 ident :: Parser Token
-ident = toTokenParser TIdent ident'
+ident = toTokenParser TIdent ident' <?> "identifier"
   where
     ident' = lexeme . try $ check . toText =<< identStr
     identStr = (:) <$> letterChar <*> many (alphaNumChar <|> single '_')
     check str =
       if str `Bimap.memberR` kws
-        then fail [i|keyword #{str} cannot be an identifier|]
+        then fail [i|keyword `#{str}` cannot be an identifier|]
         else return str
 
 strLit :: Parser Token
@@ -207,7 +210,7 @@ strLit = toTokenParser TStrLit $ toText <$> (doubleQuote *> L.charLiteral `manyT
 floatLit, decimalLit, numLit :: Parser Token
 floatLit = toTokenParser TNumLit $ show @_ @Double <$> L.float
 decimalLit = toTokenParser TNumLit $ show @_ @Integer <$> L.decimal
-numLit = lexeme $ try floatLit <|> decimalLit
+numLit = lexeme (try floatLit <|> decimalLit) <?> "number literal"
 
 data Lit
   = LNil
@@ -217,8 +220,10 @@ data Lit
 
 instance Prelude.Show Lit where
   show LNil = "nil"
-  show (LBool b) = show b
-  show (LNum n) = show n
+  show (LBool b) = toLower <$> show b
+  show (LNum n) =
+    let fl = floor @_ @Integer n
+     in if fl == ceiling n then show fl else show n
   show (LStr s) = show s
 
 data Expr
@@ -272,18 +277,20 @@ primary =
       expression & between (op TLParen) (op TRParen) <&> EGrouping,
       ESuper <$> kw TSuper <*> (op TDot *> ident)
     ]
+    <?> "primary expression"
 
 toBinParser :: Parser Expr -> (Expr -> Parser Expr) -> Parser Expr
-toBinParser car cdr = do c <- car; go c & option c
+toBinParser car cdr = do c <- car <?> "operand"; go c & option c
   where
     go c = do c' <- cdr c; go c' & option c'
 
 call :: Parser Expr
-call = toBinParser primary \c -> goArgs c <|> goGet c
+call = label "call expression" $
+  toBinParser primary \c -> goArgs c <|> goGet c
   where
     goArgs c = ECall c <$> (op TLParen *> args) <*> op TRParen
     goGet c = op TDot *> ident <&> EGet c
-    args = expression `sepBy` op TComma
+    args = expression `sepBy` op TComma <?> "arguments"
 
 unary, factor, term, comparison, equality, logicAnd, logicOr :: Parser Expr
 unary = (EUnary <$> (op TBang <|> op TMinus) <*> unary) <|> call
@@ -301,7 +308,7 @@ logicAnd = toBinParser equality \c -> EBinary c <$> kw TAnd <*> equality
 logicOr = toBinParser logicAnd \c -> EBinary c <$> kw TOr <*> logicAnd
 
 expression :: Parser Expr
-expression = do
+expression = label "expression" do
   lhs' <- logicOr
   option lhs' do
     rhs' <- op TEqual *> expression -- Assignment expression detected.
@@ -313,52 +320,56 @@ expression = do
 -- Statements (and Declarations):
 
 exprStmt, forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt, block :: Parser Stmt
-exprStmt = expression <* op TSemicolon <&> SExpr
+exprStmt = expression <* op TSemicolon <&> SExpr <?> "expression statement"
 -- for (init; cond; incr) body => { init; while (cond) { body incr; } }
-forStmt = do
-  init' <-
-    ((varDecl <|> exprStmt) <&> Just) <|> (op TSemicolon $> Nothing)
-      & between (kw TFor *> op TLBrace) (op TSemicolon)
-  cond <- optional expression <* op TSemicolon
-  incr <- optional expression <* op TRBrace
-  body <- statement
+forStmt = label "for statement" do
+  init' <- kw TFor *> op TLParen *> (Just <$> (varDecl <|> exprStmt) <|> Nothing <$ op TSemicolon <?> "initialization")
+  cond <- (optional expression <?> "condition") <* op TSemicolon
+  incr <- (optional expression <?> "incrementation") <* op TRParen
+  body <- statement <?> "body"
   let body' = SBlock . catMaybes $ [Just body, SExpr <$> incr]
   let while' = SWhile (cond & fromMaybe (ELiteral $ LBool True)) body'
   return . SBlock . catMaybes $ [init', Just while']
 ifStmt =
   SIf
-    <$> (kw TIf *> (expression & between (op TLParen) (op TRParen)))
-    <*> statement
-    <*> optional (kw TElse *> statement)
-jumpStmt = expression & between (kw TBreak <|> kw TContinue) (op TSemicolon) <&> SPrint
-printStmt = expression & between (kw TPrint) (op TSemicolon) <&> SPrint
-returnStmt = SReturn <$> kw TReturn <*> (optional expression <* op TSemicolon)
-whileStmt = between (kw TWhile) (op TSemicolon) $ SWhile <$> expression <*> statement
+    <$> (kw TIf *> between (op TLParen) (op TRParen) (expression <?> "condition"))
+    <*> (statement <?> "then branch")
+    <*> optional (kw TElse *> (statement <?> "else branch"))
+    <?> "if statement"
+jumpStmt = expression & between (kw TBreak <|> kw TContinue) (op TSemicolon) <&> SPrint <?> "jump statement"
+printStmt = expression & between (kw TPrint) (op TSemicolon) <&> SPrint <?> "print statement"
+returnStmt = SReturn <$> kw TReturn <*> (optional expression <* op TSemicolon) <?> "return statement"
+whileStmt = kw TWhile *> (SWhile <$> expression <*> statement) <?> "while statement"
 block = SBlock <$> rawBlock
 
 rawBlock :: Parser [Stmt]
-rawBlock = op TLBrace *> declaration `manyTill` op TRBrace
+rawBlock = op TLBrace *> declaration `manyTill` op TRBrace <?> "block"
 
 paramList :: Parser [Token]
-paramList = between (op TLParen) (op TRParen) (ident `sepBy` op TComma)
+paramList = between (op TLParen) (op TRParen) (ident `sepBy` op TComma) <?> "parameters"
 
 statement :: Parser Stmt
-statement = choice [exprStmt, forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt, block]
+statement = choice [exprStmt, forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt, block] <?> "statement"
 
 classDecl, funDecl, varDecl, rawFunDecl :: Parser Stmt
 classDecl =
   SClass
-    <$> (kw TClass *> ident)
-    <*> optional (op TLess *> ident <&> EVariable)
-    <*> between (op TLBrace) (op TRBrace) (many rawFunDecl)
+    <$> (kw TClass *> ident <?> "class name")
+    <*> optional (op TLess *> ident <&> EVariable <?> "superclass")
+    <*> between (op TLBrace) (op TRBrace) (many rawFunDecl <?> "method declarations")
+    <?> "class declaration"
 funDecl = kw TFun *> rawFunDecl
 varDecl =
-  between (kw TVar) (op TSemicolon) $
-    SVarDecl <$> ident <*> optional (op TEqual *> expression)
-rawFunDecl = SFunDecl <$> ident <*> paramList <*> rawBlock
+  SVarDecl <$> ident <*> optional (op TEqual *> expression <?> "initialization")
+    & between (kw TVar) (op TSemicolon)
+    <?> "variable declaration"
+rawFunDecl = SFunDecl <$> (ident <?> "function name") <*> paramList <*> rawBlock <?> "function declaration"
 
 declaration :: Parser Stmt
-declaration = choice [classDecl, funDecl, varDecl, statement]
+declaration = choice [classDecl, funDecl, varDecl, statement] <?> "declaration"
+
+program :: Parser [Stmt]
+program = many declaration <?> "declarations"
 
 instance Prelude.Show Expr where
   show (EAssign name val) = [i|(assign! #{name} #{val})|]
@@ -397,7 +408,7 @@ instance Prelude.Show Stmt where
   show (SVarDecl name ex) =
     let ex' = ex & foldMap \s -> [i| #{s}|] :: Text
      in [i|(var #{name}#{ex'})|]
-  show (SWhile cond body) = [i|(while #{cond}#{body})|]
+  show (SWhile cond body) = [i|(while #{cond} #{body})|]
 
 intercalateS, intercalateS' :: Show a => [a] -> String
 intercalateS = intercalate " " . fmap show
