@@ -196,7 +196,7 @@ ident :: Parser Token
 ident = toTokenParser TIdent ident' <?> "identifier"
   where
     ident' = lexeme . try $ check . toText =<< identStr
-    identStr = (:) <$> letterChar <*> hidden (many (alphaNumChar <|> single '_'))
+    identStr = (:) <$> letterChar <*> (hidden . many) (alphaNumChar <|> single '_')
     check str =
       if str `Bimap.memberR` kws
         then fail [i|keyword `#{str}` cannot be an identifier|]
@@ -222,6 +222,7 @@ instance Prelude.Show Lit where
   show LNil = "nil"
   show (LBool b) = toLower <$> show b
   show (LNum n) =
+    -- If @n@ is an integer, then show it as an integer.
     let fl = floor @_ @Integer n
      in if fl == ceiling n then show fl else show n
   show (LStr s) = show s
@@ -323,7 +324,9 @@ exprStmt, forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt, block :: 
 exprStmt = expression <* op TSemicolon <&> SExpr <?> "expression statement"
 -- for (init; cond; incr) body => { init; while (cond) { body incr; } }
 forStmt = label "for statement" do
-  init' <- kw TFor *> op TLParen *> (Just <$> (varDecl <|> exprStmt) <|> Nothing <$ op TSemicolon <?> "initialization")
+  init' <-
+    kw TFor *> op TLParen
+      *> (Just <$> (varDecl <|> exprStmt) <|> Nothing <$ op TSemicolon <?> "initialization")
   cond <- (optional expression <?> "condition") <* op TSemicolon
   incr <- (optional expression <?> "incrementation") <* op TRParen
   body <- statement <?> "body"
@@ -349,9 +352,11 @@ paramList :: Parser [Token]
 paramList = between (op TLParen) (op TRParen) (ident `sepBy` hidden (op TComma)) <?> "parameters"
 
 statement :: Parser Stmt
-statement = choice [forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt, block, exprStmt] <?> "statement"
+statement =
+  choice [forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt, block, exprStmt]
+    <?> "statement"
 
-classDecl, funDecl, varDecl, rawFunDecl :: Parser Stmt
+classDecl, funDecl, rawFunDecl, varDecl :: Parser Stmt
 classDecl =
   SClass
     <$> (kw TClass *> (ident <?> "class name"))
@@ -359,11 +364,15 @@ classDecl =
     <*> between (op TLBrace) (op TRBrace) (many rawFunDecl <?> "method declarations")
     <?> "class declaration"
 funDecl = kw TFun *> rawFunDecl
+rawFunDecl =
+  SFunDecl <$> (ident <?> "function name")
+    <*> paramList
+    <*> (rawBlock <?> "function body")
+    <?> "function declaration"
 varDecl =
   SVarDecl <$> ident <*> optional (op TEqual *> expression <?> "initialization")
     & between (kw TVar) (op TSemicolon)
     <?> "variable declaration"
-rawFunDecl = SFunDecl <$> (ident <?> "function name") <*> paramList <*> rawBlock <?> "function declaration"
 
 declaration :: Parser Stmt
 declaration = choice [classDecl, funDecl, varDecl, statement] <?> "declaration"
