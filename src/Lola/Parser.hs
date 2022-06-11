@@ -336,7 +336,7 @@ ifStmt =
     <*> (statement <?> "then branch")
     <*> optional (kw TElse *> (statement <?> "else branch"))
     <?> "if statement"
-jumpStmt = expression & between (kw TBreak <|> kw TContinue) (op TSemicolon) <&> SPrint <?> "jump statement"
+jumpStmt = (kw TBreak <|> kw TContinue) <* op TSemicolon <&> SJump <?> "jump statement"
 printStmt = expression & between (kw TPrint) (op TSemicolon) <&> SPrint <?> "print statement"
 returnStmt = SReturn <$> kw TReturn <*> (optional expression <* op TSemicolon) <?> "return statement"
 whileStmt = kw TWhile *> (SWhile <$> expression <*> statement) <?> "while statement"
@@ -354,8 +354,8 @@ statement = choice [forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt,
 classDecl, funDecl, varDecl, rawFunDecl :: Parser Stmt
 classDecl =
   SClass
-    <$> (kw TClass *> ident <?> "class name")
-    <*> optional (op TLess *> ident <&> EVariable <?> "superclass")
+    <$> (kw TClass *> (ident <?> "class name"))
+    <*> (hidden . optional) (op TLess *> (ident <&> EVariable <?> "superclass"))
     <*> between (op TLBrace) (op TRBrace) (many rawFunDecl <?> "method declarations")
     <?> "class declaration"
 funDecl = kw TFun *> rawFunDecl

@@ -68,6 +68,7 @@ library
     , extra
     , megaparsec
     , optics
+    , raw-strings-qq
     , relude
     , string-interpolate
     , witch
@@ -117,6 +118,7 @@ executable lola-exe
     , lola
     , megaparsec
     , optics
+    , raw-strings-qq
     , relude
     , string-interpolate
     , witch
@@ -171,6 +173,7 @@ test-suite lola-test
     , lola
     , megaparsec
     , optics
+    , raw-strings-qq
     , regex-compat
     , relude
     , string-interpolate
