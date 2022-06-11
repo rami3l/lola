@@ -265,6 +265,7 @@ primary =
       kw TFalse $> ELiteral (LBool False),
       kw TNil $> ELiteral LNil,
       kw TThis <&> EThis,
+      ELambda <$> (kw TFun *> paramList) <*> rawBlock,
       numLit <&> ELiteral . LNum . read . toString . tokenLexeme,
       strLit <&> ELiteral . LStr . tokenLexeme,
       ident <&> EVariable,
@@ -338,6 +339,9 @@ block = SBlock <$> rawBlock
 rawBlock :: Parser [Stmt]
 rawBlock = op TLBrace *> declaration `manyTill` op TRBrace
 
+paramList :: Parser [Token]
+paramList = between (op TLParen) (op TRParen) (ident `sepBy` op TComma)
+
 statement :: Parser Stmt
 statement = choice [exprStmt, forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt, block]
 
@@ -351,7 +355,7 @@ funDecl = kw TFun *> rawFunDecl
 varDecl =
   between (kw TVar) (op TSemicolon) $
     SVarDecl <$> ident <*> optional (op TEqual *> expression)
-rawFunDecl = SFunDecl <$> ident <*> ident `sepBy` op TComma <*> rawBlock
+rawFunDecl = SFunDecl <$> ident <*> paramList <*> rawBlock
 
 declaration :: Parser Stmt
 declaration = choice [classDecl, funDecl, varDecl, statement]
@@ -366,7 +370,7 @@ instance Prelude.Show Expr where
   show (EGrouping inner) = show inner
   show (ELambda params body) =
     let body' = if null body then "'()" else intercalateS body
-     in [i|(λ (#{intercalateS params}) #{body'})|]
+     in [i|(lambda (#{intercalateS params}) #{body'})|]
   show (ELiteral lit) = show lit
   show (ELogical lhs op' rhs) = [i|(#{op'} #{lhs} #{rhs})|]
   show (ESet obj name to) = [i|(.set! #{obj} #{name} #{to})|]

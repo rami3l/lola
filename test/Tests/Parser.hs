@@ -79,4 +79,15 @@ test_call =
       testCase "with `super`" $ "super.method()" `assertParse` "((. (super) method))"
     ]
 
--- TODO: Support lambda expressions.
+test_lambda :: TestTree
+test_lambda =
+  testGroup
+    "Should handle lambda expressions"
+    [ testCase "with no-op" $ "fun () { }" `assertParse` "(lambda () '())",
+      testCase "with in-place call" $
+        "fun () { } ()"
+          `assertParse` "((lambda () '()))",
+      testCase "with params and body" $
+        "fun (a, b, c, d) { print a * b - c / d; }"
+          `assertParse` "(lambda (a b c d) (print (- (* a b) (/ c d))))"
+    ]
