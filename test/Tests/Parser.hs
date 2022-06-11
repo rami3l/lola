@@ -31,6 +31,10 @@ test_arithmetic =
     "Should parse arithmetic expressions"
     [ testCase "with precedence" $
         "1+2 / 3- 4 *5" `assertExpr` "(- (+ 1 (/ 2 3)) (* 4 5))",
+      testCase "with missing unary operand" $
+        "-" `assertExprError` "expecting operand$",
+      testCase "with missing binary operand" $
+        "1-" `assertExprError` "expecting operand$",
       testCase "with parens" $
         "-(-1+2 / 3- 4 *5+ (6/ 7))"
           `assertExpr` "(- (+ (- (+ (- 1) (/ 2 3)) (* 4 5)) (/ 6 7)))",
@@ -67,10 +71,10 @@ test_call :: TestTree
 test_call =
   testGroup
     "Should parse function calls and get/set expressions"
-    [ testCase "with complex calls" $
+    [ testCase "with complex call" $
         "func (c) (u, r) (r(y), i) (n) (g) ()"
           `assertExpr` "((((((func c) u r) (r y) i) n) g))",
-      testCase "with complex calls & typo" $
+      testCase "with complex call, typo" $
         "func (c) (u, r (r(y), i) (n) (g) ()"
           `assertExprError` "expecting ')'$",
       testCase "with gets and sets" $
@@ -110,15 +114,34 @@ test_simple :: TestTree
 test_simple =
   testGroup
     "Should handle simple statements"
-    [ testCase "with print" $
+    [ testCase "with `print`" $ "print foo;" `assertProg` ["(print foo)"],
+      testCase "with `print`, complex expression" $
         "print -(-1+2) >=3;"
           `assertProg` ["(print (>= (- (+ (- 1) 2)) 3))"],
-      testCase "with `if`-`else`" $
+      testCase "with expression" $ "foo;" `assertProg` ["foo"],
+      testCase "with expression, missing semicolon" $
+        "foo" `assertProgError` "expecting ';'",
+      testCase "with `var`" $ "var foo;" `assertProg` ["(var foo)"],
+      testCase "with `var`, init'd" $
+        "var foo = 42;" `assertProg` ["(var foo 42)"],
+      testCase "with block" $
+        "var foo; { var bar = 1; print bar; } var baz;"
+          `assertProg` ["(var foo)", "(begin (var bar 1) (print bar))", "(var baz)"],
+      testCase "with block, typo" $
+        "var foo; { var bar = 1; print bar; var baz;"
+          `assertProgError` "expecting '}'"
+    ]
+
+test_controlFlow :: TestTree
+test_controlFlow =
+  testGroup
+    "Should handle control flows"
+    [ testCase "with `if`-`else`" $
         "var year; if (2 + 2 == 5) year = 1984; else year = 2022;"
           `assertProg` [ "(var year)",
                          "(if (== (+ 2 2) 5) (assign! year 1984) (assign! year 2022))"
                        ],
-      testCase "with `if`, missing then branch" $
+      testCase "with `if`, missing `then` branch" $
         "var year; if (2 + 2 == 5)" `assertProgError` "expecting then branch$",
       testCase "with `if`" $
         "var year; if (2 + 2 == 5) year = 1984;"
@@ -140,5 +163,8 @@ test_simple =
           `assertProg` ["(begin (assign! i (assign! product 1)) (while (<= i 5) (begin (begin (assign! product (* product i))) (assign! i (+ i 1)))))"],
       testCase "with `for`, pure loop" $
         "for (;;) { product = product * i; }"
-          `assertProg` ["(begin (while true (begin (begin (assign! product (* product i))))))"]
+          `assertProg` ["(begin (while true (begin (begin (assign! product (* product i))))))"],
+      testCase "with `for`, typo" $
+        "for (i = product = 1; i <= 5, i = i + 1) { product = product * i; }"
+          `assertProgError` "expecting ';'"
     ]

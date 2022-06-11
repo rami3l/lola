@@ -196,7 +196,7 @@ ident :: Parser Token
 ident = toTokenParser TIdent ident' <?> "identifier"
   where
     ident' = lexeme . try $ check . toText =<< identStr
-    identStr = (:) <$> letterChar <*> many (alphaNumChar <|> single '_')
+    identStr = (:) <$> letterChar <*> hidden (many (alphaNumChar <|> single '_'))
     check str =
       if str `Bimap.memberR` kws
         then fail [i|keyword `#{str}` cannot be an identifier|]
@@ -280,9 +280,9 @@ primary =
     <?> "primary expression"
 
 toBinParser :: Parser Expr -> (Expr -> Parser Expr) -> Parser Expr
-toBinParser car cdr = do c <- car <?> "operand"; go c & hidden & option c
+toBinParser car cdr = do c <- car <?> "operand"; go c & option c
   where
-    go c = do c' <- cdr c; go c' & option c'
+    go c = hidden $ do c' <- cdr c; go c' & option c'
 
 call :: Parser Expr
 call = label "call expression" $
@@ -343,7 +343,7 @@ whileStmt = kw TWhile *> (SWhile <$> expression <*> statement) <?> "while statem
 block = SBlock <$> rawBlock
 
 rawBlock :: Parser [Stmt]
-rawBlock = op TLBrace *> declaration `manyTill` op TRBrace <?> "block"
+rawBlock = op TLBrace *> hidden declaration `manyTill` op TRBrace <?> "block"
 
 paramList :: Parser [Token]
 paramList = between (op TLParen) (op TRParen) (ident `sepBy` hidden (op TComma)) <?> "parameters"
