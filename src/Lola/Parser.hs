@@ -18,7 +18,7 @@ import Data.String.Interpolate
 import Optics (makeFieldLabels)
 import Relude
 import Text.Megaparsec
-  ( MonadParsec (label, notFollowedBy, try),
+  ( MonadParsec (hidden, label, notFollowedBy, try),
     ParseErrorBundle,
     Parsec,
     SourcePos,
@@ -280,7 +280,7 @@ primary =
     <?> "primary expression"
 
 toBinParser :: Parser Expr -> (Expr -> Parser Expr) -> Parser Expr
-toBinParser car cdr = do c <- car <?> "operand"; go c & option c
+toBinParser car cdr = do c <- car <?> "operand"; go c & hidden & option c
   where
     go c = do c' <- cdr c; go c' & option c'
 
@@ -290,10 +290,10 @@ call = label "call expression" $
   where
     goArgs c = ECall c <$> (op TLParen *> args) <*> op TRParen
     goGet c = op TDot *> ident <&> EGet c
-    args = expression `sepBy` op TComma <?> "arguments"
+    args = expression `sepBy` hidden (op TComma) <?> "arguments"
 
 unary, factor, term, comparison, equality, logicAnd, logicOr :: Parser Expr
-unary = (EUnary <$> (op TBang <|> op TMinus) <*> unary) <|> call
+unary = (EUnary <$> (op TBang <|> op TMinus) <*> (unary <?> "operand")) <|> call
 factor = toBinParser unary \c ->
   EBinary c <$> (op TSlash <|> op TStar) <*> unary
 term = toBinParser factor \c ->
@@ -310,8 +310,8 @@ logicOr = toBinParser logicAnd \c -> EBinary c <$> kw TOr <*> logicAnd
 expression :: Parser Expr
 expression = label "expression" do
   lhs' <- logicOr
-  option lhs' do
-    rhs' <- op TEqual *> expression -- Assignment expression detected.
+  option lhs' $ hidden do
+    rhs' <- op TEqual *> (expression <?> "rvalue") -- Assignment expression detected.
     case lhs' of
       EVariable name -> return $ EAssign name rhs'
       EGet obj name -> return $ ESet obj name rhs'
@@ -346,10 +346,10 @@ rawBlock :: Parser [Stmt]
 rawBlock = op TLBrace *> declaration `manyTill` op TRBrace <?> "block"
 
 paramList :: Parser [Token]
-paramList = between (op TLParen) (op TRParen) (ident `sepBy` op TComma) <?> "parameters"
+paramList = between (op TLParen) (op TRParen) (ident `sepBy` hidden (op TComma)) <?> "parameters"
 
 statement :: Parser Stmt
-statement = choice [exprStmt, forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt, block] <?> "statement"
+statement = choice [forStmt, ifStmt, jumpStmt, printStmt, returnStmt, whileStmt, block, exprStmt] <?> "statement"
 
 classDecl, funDecl, varDecl, rawFunDecl :: Parser Stmt
 classDecl =

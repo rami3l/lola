@@ -35,13 +35,13 @@ test_arithmetic =
         "-(-1+2 / 3- 4 *5+ (6/ 7))"
           `assertExpr` "(- (+ (- (+ (- 1) (/ 2 3)) (* 4 5)) (/ 6 7)))",
       testCase "with paren mismatch" $
-        -- TODO: Improve error message quality.
-        "-(-1+2 / 3- 4 *5+ (6/ 7)" `assertExprError` "unexpected end of input",
+        "-(-1+2 / 3- 4 *5+ (6/ 7)" `assertExprError` "expecting ')'$",
       -- TODO: Add parser syncing?
+      -- https://markkarpov.com/tutorial/megaparsec.html#reporting-multiple-parse-errors
       -- TODO: paren_mismatch_sync
       testCase "with binary misused as unary" $
         -- TODO: Improve error message quality.
-        "*1" `assertExprError` [i|unexpected "\\*1"|],
+        "*1" `assertExprError` "expecting expression$",
       -- TODO: mul_used_as_unary_sync
       testCase "with assignments" $
         "a = b = c = 3" `assertExpr` "(assign! a (assign! b (assign! c 3)))"
@@ -51,10 +51,12 @@ test_boolean :: TestTree
 test_boolean =
   testGroup
     "Should parse booleans"
-    [ testCase "with an inequality" $
+    [ testCase "with `>=`" $
         "-(-1+2) >=3- 4 *5+ (6/ 7)"
           `assertExpr` "(>= (- (+ (- 1) 2)) (+ (- 3 (* 4 5)) (/ 6 7)))",
-      -- TODO: inequality_used_as_unary
+      testCase "with `>=`, misused as unary" $
+        ">= 1+2 == 3"
+          `assertExprError` "expecting expression$",
       -- TODO: inequality_used_as_unary_sync
       testCase "with `and`, `or` and `!`" $
         "foo == nil or !!bar and a != (b = c = 3)"
@@ -68,7 +70,9 @@ test_call =
     [ testCase "with complex calls" $
         "func (c) (u, r) (r(y), i) (n) (g) ()"
           `assertExpr` "((((((func c) u r) (r y) i) n) g))",
-      -- TODO: fun_call_typo
+      testCase "with complex calls & typo" $
+        "func (c) (u, r (r(y), i) (n) (g) ()"
+          `assertExprError` "expecting ')'$",
       testCase "with gets and sets" $
         "breakfast.omelette.filling.meat = ham"
           `assertExpr` "(.set! (. (. breakfast omelette) filling) meat ham)",
@@ -114,7 +118,8 @@ test_simple =
           `assertProg` [ "(var year)",
                          "(if (== (+ 2 2) 5) (assign! year 1984) (assign! year 2022))"
                        ],
-      -- TODO: if_stmt_no_then
+      testCase "with `if`, missing then branch" $
+        "var year; if (2 + 2 == 5)" `assertProgError` "expecting then branch$",
       testCase "with `if`" $
         "var year; if (2 + 2 == 5) year = 1984;"
           `assertProg` [ "(var year)",
