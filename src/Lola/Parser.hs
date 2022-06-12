@@ -312,11 +312,13 @@ expression :: Parser Expr
 expression = label "expression" do
   lhs' <- logicOr
   option lhs' $ hidden do
-    rhs' <- op TEqual *> (expression <?> "rvalue") -- Assignment expression detected.
+    _ <- op TEqual -- Assignment expression detected.
     case lhs' of
-      EVariable name -> return $ EAssign name rhs'
-      EGet obj name -> return $ ESet obj name rhs'
-      _ -> fail "Error while parsing an Assignment Expression: can only assign to a variable"
+      EVariable name -> EAssign name <$> rhs'
+      EGet obj name -> ESet obj name <$> rhs'
+      _ -> fail "can only assign to an lvalue"
+  where
+    rhs' = expression <?> "rvalue"
 
 -- Statements (and Declarations):
 
