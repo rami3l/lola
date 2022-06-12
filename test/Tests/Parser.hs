@@ -40,7 +40,7 @@ test_arithmetic =
         "-(-1+2 / 3- 4 *5+ (6/ 7))"
           `assertExpr` "(- (+ (- (+ (- 1) (/ 2 3)) (* 4 5)) (/ 6 7)))",
       testCase "with paren mismatch" $
-        "-(-1+2 / 3- 4 *5+ (6/ 7)" `assertExprError` "expecting ')'$",
+        "-(-1+2 / 3- 4 *5+ (6/ 7)" `assertExprError` [r|expecting '\)'$|],
       -- TODO: Add parser syncing?
       -- https://markkarpov.com/tutorial/megaparsec.html#reporting-multiple-parse-errors
       -- TODO: paren_mismatch_sync
@@ -77,7 +77,7 @@ test_call =
           `assertExpr` "((((((func c) u r) (r y) i) n) g))",
       testCase "with complex call, typo" $
         "func (c) (u, r (r(y), i) (n) (g) ()"
-          `assertExprError` "expecting ')'$",
+          `assertExprError` [r|expecting '\)'$|],
       testCase "with gets and sets" $
         "breakfast.omelette.filling.meat = ham"
           `assertExpr` "(.set! (. (. breakfast omelette) filling) meat ham)",

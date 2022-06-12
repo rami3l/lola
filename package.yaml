@@ -89,7 +89,7 @@ tests:
       - -with-rtsopts=-N
     dependencies:
       - lola
-      - regex-compat
+      - regex-tdfa
       - tasty
       - tasty-hunit
       - tasty-quickcheck

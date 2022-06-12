@@ -174,7 +174,7 @@ test-suite lola-test
     , megaparsec
     , optics
     , raw-strings-qq
-    , regex-compat
+    , regex-tdfa
     , relude
     , string-interpolate
     , tasty

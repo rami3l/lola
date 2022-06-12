@@ -402,22 +402,19 @@ instance Prelude.Show Expr where
 instance Prelude.Show Stmt where
   show (SBlock stmts) = [i|(begin #{intercalateS' stmts})|]
   show (SClass name super methods) =
-    let super' = super & foldMap \s -> [i| (<: #{s})|] :: Text
+    let super' = super & foldMap \s -> ([i| (<: #{s})|] :: String)
      in [i|(class #{name}#{super'} (#{intercalateS methods}))|]
   show (SExpr ex) = show ex
   show (SFunDecl name params body) = [i|(fun #{name} (#{intercalateS params}) #{intercalateS' body})|]
-  show (SIf cond then' else') =
-    let else'' = else' & foldMap \s -> [i| #{s}|] :: Text
-     in [i|(if #{cond} #{then'}#{else''})|]
+  show (SIf cond then' else') = [i|(if #{cond} #{then'}#{prependS else'})|]
   show (SJump kw') = [i|(#{kw'})|]
   show (SPrint ex) = [i|(print #{ex})|]
-  show (SReturn kw' ex) =
-    let ex' = ex & foldMap \s -> [i| #{s}|] :: Text
-     in [i|(#{kw'}#{ex'})|]
-  show (SVarDecl name ex) =
-    let ex' = ex & foldMap \s -> [i| #{s}|] :: Text
-     in [i|(var #{name}#{ex'})|]
+  show (SReturn kw' ex) = [i|(#{kw'}#{prependS ex})|]
+  show (SVarDecl name ex) = [i|(var #{name}#{prependS ex})|]
   show (SWhile cond body) = [i|(while #{cond} #{body})|]
+
+prependS :: Show a => Maybe a -> String
+prependS = foldMap \s -> " " <> show s
 
 intercalateS, intercalateS' :: Show a => [a] -> String
 intercalateS = intercalate " " . fmap show

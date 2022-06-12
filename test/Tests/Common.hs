@@ -3,9 +3,9 @@ module Tests.Common where
 import Data.String.Interpolate
 import Relude
 import Test.Tasty.HUnit (Assertion, (@?))
-import Text.Regex (matchRegex, mkRegex)
+import Text.Regex.TDFA ((=~))
 
 assertRegexMatch :: Text -> Text -> Assertion
 assertRegexMatch got pattern' =
-  (mkRegex (toString pattern') `matchRegex` toString got & isJust)
+  (got =~ pattern' :: Bool)
     @? [i|regex mismatch: expected `#{pattern'}`, got `#{got}`|]
