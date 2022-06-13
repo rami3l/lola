@@ -25,6 +25,7 @@ default-extensions:
   - ConstraintKinds
   - DataKinds
   - DeriveGeneric
+  - DuplicateRecordFields
   - ExtendedDefaultRules
   - FlexibleContexts
   - FlexibleInstances

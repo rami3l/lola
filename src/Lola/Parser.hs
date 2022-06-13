@@ -15,7 +15,7 @@ import qualified Data.Bimap as Bimap
 import Data.Char (toLower)
 import qualified Data.Map.Strict as Map
 import Data.String.Interpolate
-import Optics (makeFieldLabels)
+import Optics (makeFieldLabels, (^.))
 import Relude
 import Text.Megaparsec
   ( MonadParsec (hidden, label, notFollowedBy, try),
@@ -143,7 +143,7 @@ data Token = Token
 
 makeFieldLabels ''Token
 
-instance Prelude.Show Token where show = toString . tokenLexeme
+instance Prelude.Show Token where show = toString . (^. #lexeme)
 
 type ParserError = Void
 

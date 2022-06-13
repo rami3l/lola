@@ -37,6 +37,7 @@ library
       ConstraintKinds
       DataKinds
       DeriveGeneric
+      DuplicateRecordFields
       ExtendedDefaultRules
       FlexibleContexts
       FlexibleInstances
@@ -86,6 +87,7 @@ executable lola-exe
       ConstraintKinds
       DataKinds
       DeriveGeneric
+      DuplicateRecordFields
       ExtendedDefaultRules
       FlexibleContexts
       FlexibleInstances
@@ -139,6 +141,7 @@ test-suite lola-test
       ConstraintKinds
       DataKinds
       DeriveGeneric
+      DuplicateRecordFields
       ExtendedDefaultRules
       FlexibleContexts
       FlexibleInstances
