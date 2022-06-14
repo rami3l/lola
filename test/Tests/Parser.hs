@@ -31,7 +31,7 @@ test_arithmetic =
   testGroup
     "Should parse arithmetic expressions"
     [ testCase "with precedence" $
-        "1+2 / 3- 4 *5" `assertExpr` "(- (+ 1 (/ 2 3)) (* 4 5))",
+        "1+2 / 3- 4 *-5.678" `assertExpr` "(- (+ 1 (/ 2 3)) (* 4 (- 5.678)))",
       testCase "with missing unary operand" $
         "-" `assertExprError` "expecting operand$",
       testCase "with missing binary operand" $

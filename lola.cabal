@@ -33,6 +33,7 @@ library
       src
   default-extensions:
       AllowAmbiguousTypes
+      BinaryLiterals
       BlockArguments
       ConstraintKinds
       DataKinds
@@ -83,6 +84,7 @@ executable lola-exe
       app
   default-extensions:
       AllowAmbiguousTypes
+      BinaryLiterals
       BlockArguments
       ConstraintKinds
       DataKinds
@@ -137,6 +139,7 @@ test-suite lola-test
       test
   default-extensions:
       AllowAmbiguousTypes
+      BinaryLiterals
       BlockArguments
       ConstraintKinds
       DataKinds

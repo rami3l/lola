@@ -6,19 +6,21 @@ module Lola.Parser
     Token,
     TokenType,
     expression,
+    primary,
     program,
+    showRealFrac,
   )
 where
 
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import Data.Char (toLower)
+import Data.Char (isDigit, toLower)
 import qualified Data.Map.Strict as Map
 import Data.String.Interpolate
 import Optics (makeFieldLabels, (^.))
 import Relude
 import Text.Megaparsec
-  ( MonadParsec (hidden, label, notFollowedBy, try),
+  ( MonadParsec (hidden, label, notFollowedBy, takeWhile1P, try),
     ParseErrorBundle,
     Parsec,
     SourcePos,
@@ -113,7 +115,8 @@ data TokenType
   | TLessEqual
   | TIdent
   | TStrLit
-  | TNumLit
+  | TFloatLit
+  | TDecimalLit
   | TAnd
   | TBreak
   | TClass
@@ -207,10 +210,16 @@ strLit = toTokenParser TStrLit $ toText <$> (doubleQuote *> L.charLiteral `manyT
   where
     doubleQuote = char '"'
 
-floatLit, decimalLit, numLit :: Parser Token
-floatLit = toTokenParser TNumLit $ show @_ @Double <$> L.float
-decimalLit = toTokenParser TNumLit $ show @_ @Integer <$> L.decimal
-numLit = lexeme (try floatLit <|> decimalLit) <?> "number literal"
+numLit :: Parser Token
+numLit = label "number literal" $ lexeme do
+  pos <- getSourcePos
+  car <- digits
+  Token TDecimalLit car pos `option` hidden do
+    cdr <- char '.' *> digits
+    return $ Token TFloatLit [i|#{car}.#{cdr}|] pos
+
+digits :: Parser Text
+digits = takeWhile1P (Just "digit") isDigit
 
 data Lit
   = LNil
@@ -221,11 +230,15 @@ data Lit
 instance Prelude.Show Lit where
   show LNil = "nil"
   show (LBool b) = toLower <$> show b
-  show (LNum n) =
-    -- If @n@ is an integer, then show it as an integer.
-    let fl = floor @_ @Integer n
-     in if fl == ceiling n then show fl else show n
+  show (LNum n) = showRealFrac n
   show (LStr s) = show s
+
+-- | If @n@ is an integer, then show it as an integer.
+-- Otherwise it will be shown normally.
+showRealFrac :: (RealFrac a, IsString b, Show a) => a -> b
+showRealFrac n =
+  let fl = floor @_ @Integer n
+   in if fl == ceiling n then show fl else show n
 
 data Expr
   = EAssign {assignName :: Token, assignVal :: Expr}
@@ -272,7 +285,7 @@ primary =
       kw TNil $> ELiteral LNil,
       kw TThis <&> EThis,
       ELambda <$> (kw TFun *> paramList) <*> rawBlock,
-      numLit <&> ELiteral . LNum . read . toString . tokenLexeme,
+      numLit <&> ELiteral . LNum . read . toString . (^. #lexeme),
       strLit <&> ELiteral . LStr . tokenLexeme,
       ident <&> EVariable,
       expression & between (op TLParen) (op TRParen) <&> EGrouping,
@@ -281,9 +294,9 @@ primary =
     <?> "primary expression"
 
 toBinParser :: Parser Expr -> (Expr -> Parser Expr) -> Parser Expr
-toBinParser car cdr = do c <- car <?> "operand"; go c & option c
+toBinParser car cdr = do c <- car <?> "operand"; c `option` go c
   where
-    go c = hidden $ do c' <- cdr c; go c' & option c'
+    go c = hidden $ do c' <- cdr c; c' `option` go c'
 
 call :: Parser Expr
 call = label "call expression" $
@@ -311,7 +324,7 @@ logicOr = toBinParser logicAnd \c -> EBinary c <$> kw TOr <*> logicAnd
 expression :: Parser Expr
 expression = label "expression" do
   lhs' <- logicOr
-  option lhs' $ hidden do
+  lhs' `option` hidden do
     _ <- op TEqual -- Assignment expression detected.
     case lhs' of
       EVariable name -> EAssign name <$> rhs'
