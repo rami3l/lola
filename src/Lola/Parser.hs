@@ -20,15 +20,17 @@ import Data.String.Interpolate
 import Optics (makeFieldLabels, (^.))
 import Relude
 import Text.Megaparsec
-  ( MonadParsec (hidden, label, notFollowedBy, takeWhile1P, try),
+  ( MonadParsec (hidden, label, lookAhead, notFollowedBy, takeWhile1P, try, withRecovery),
     ParseErrorBundle,
     Parsec,
     SourcePos,
+    anySingle,
     between,
     choice,
     getSourcePos,
     manyTill,
     option,
+    registerParseError,
     sepBy,
     single,
     (<?>),
@@ -272,6 +274,7 @@ data Stmt
   | SReturn {returnKw :: Token, returnVal :: Maybe Expr}
   | SVarDecl {varName :: Token, varInit :: Maybe Expr}
   | SWhile {whileCond :: Expr, whileBody :: Stmt}
+  | SError
 
 -- Grammar reference: https://craftinginterpreters.com/appendix-i.html
 
@@ -390,10 +393,23 @@ varDecl =
     <?> "variable declaration"
 
 declaration :: Parser Stmt
-declaration = choice [classDecl, funDecl, varDecl, statement] <?> "declaration"
+declaration =
+  (choice [classDecl, funDecl, varDecl, statement] <?> "declaration")
+    & withRecovery ((*> sync) . registerParseError)
+
+-- | Sync the parser towards the end of the current statement,
+-- or right before the next statement.
+--
+-- See: <https://craftinginterpreters.com/parsing-expressions.html#synchronizing-a-recursive-descent-parser>
+sync :: Parser Stmt
+sync = anySingle `manyTill` end $> SError
+  where
+    end = choice $ op TSemicolon : (lookAhead . kw <$> [TClass, TFun, TVar, TFor, TIf, TWhile, TPrint, TReturn])
 
 program :: Parser [Stmt]
 program = many declaration <?> "declarations"
+
+-- AST pretty printing.
 
 instance Prelude.Show Expr where
   show (EAssign name val) = [i|(assign! #{name} #{val})|]
@@ -427,6 +443,7 @@ instance Prelude.Show Stmt where
   show (SReturn kw' ex) = [i|(#{kw'}#{prependS ex})|]
   show (SVarDecl name ex) = [i|(var #{name}#{prependS ex})|]
   show (SWhile cond body) = [i|(while #{cond} #{body})|]
+  show SError = "<?>"
 
 prependS :: Show a => Maybe a -> String
 prependS = foldMap \s -> " " <> show s
