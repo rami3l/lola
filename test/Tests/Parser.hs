@@ -41,13 +41,8 @@ test_arithmetic =
           `assertExpr` "(- (+ (- (+ (- 1) (/ 2 3)) (* 4 5)) (/ 6 7)))",
       testCase "with paren mismatch" $
         "-(-1+2 / 3- 4 *5+ (6/ 7)" `assertExprError` [r|expecting '\)'$|],
-      -- TODO: Add parser syncing?
-      -- https://markkarpov.com/tutorial/megaparsec.html#reporting-multiple-parse-errors
-      -- TODO: paren_mismatch_sync
       testCase "with binary misused as unary" $
-        -- TODO: Improve error message quality.
         "*1" `assertExprError` "expecting expression$",
-      -- TODO: mul_used_as_unary_sync
       testCase "with assignments" $
         "a = b = c = 3" `assertExpr` "(assign! a (assign! b (assign! c 3)))"
     ]
@@ -62,7 +57,6 @@ test_boolean =
       testCase "with `>=`, misused as unary" $
         ">= 1+2 == 3"
           `assertExprError` "expecting expression$",
-      -- TODO: inequality_used_as_unary_sync
       testCase "with `and`, `or` and `!`" $
         "foo == nil or !!bar and a != (b = c = 3)"
           `assertExpr` "(or (== foo nil) (and (! (! bar)) (!= a (assign! b (assign! c 3)))))"
@@ -193,6 +187,22 @@ test_decl =
         "class Foo <" `assertProgError` "expecting superclass$",
       testCase "with `class`, no body" $
         "class Foo" `assertProgError` [r|expecting '\{'$|]
+    ]
+
+test_sync :: TestTree
+test_sync =
+  testGroup
+    "Should report multiple parsing errors"
+    [ testCase "with `if` and `class`" $
+        ("if (true) class A {} var a = 4; 5" `assertProgError`)
+          `mapM_` [ "keyword `class` cannot be an identifier$",
+                    "expecting ';'$"
+                  ],
+      testCase "with `else` and `var`" $
+        ("print else var = 5" `assertProgError`)
+          `mapM_` [ "keyword `else` cannot be an identifier$",
+                    "expecting identifier$"
+                  ]
     ]
 
 -- Extra:

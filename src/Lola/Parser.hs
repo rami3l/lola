@@ -17,10 +17,11 @@ import qualified Data.Bimap as Bimap
 import Data.Char (isDigit, toLower)
 import qualified Data.Map.Strict as Map
 import Data.String.Interpolate
+import qualified Data.Text as Text
 import Optics (makeFieldLabels, (^.))
 import Relude
 import Text.Megaparsec
-  ( MonadParsec (hidden, label, lookAhead, notFollowedBy, takeWhile1P, try, withRecovery),
+  ( MonadParsec (eof, hidden, label, lookAhead, notFollowedBy, takeWhileP, try, withRecovery),
     ParseErrorBundle,
     Parsec,
     SourcePos,
@@ -31,6 +32,7 @@ import Text.Megaparsec
     manyTill,
     option,
     registerParseError,
+    satisfy,
     sepBy,
     single,
     (<?>),
@@ -221,7 +223,7 @@ numLit = label "number literal" $ lexeme do
     return $ Token TFloatLit [i|#{car}.#{cdr}|] pos
 
 digits :: Parser Text
-digits = takeWhile1P (Just "digit") isDigit
+digits = Text.cons <$> (satisfy isDigit <?> "digit") <*> hidden (takeWhileP Nothing isDigit)
 
 data Lit
   = LNil
@@ -393,21 +395,21 @@ varDecl =
     <?> "variable declaration"
 
 declaration :: Parser Stmt
-declaration =
-  (choice [classDecl, funDecl, varDecl, statement] <?> "declaration")
-    & withRecovery ((*> sync) . registerParseError)
+declaration = synced (choice [classDecl, funDecl, varDecl, statement] <?> "declaration")
+  where
+    synced = withRecovery $ (*> (sync $> SError)) . registerParseError
 
--- | Sync the parser towards the end of the current statement,
--- or right before the next statement.
+-- | Syncs the parser towards the end of the current statement,
+-- or until right before the next statement.
 --
 -- See: <https://craftinginterpreters.com/parsing-expressions.html#synchronizing-a-recursive-descent-parser>
-sync :: Parser Stmt
-sync = anySingle `manyTill` end $> SError
+sync :: Parser ()
+sync = void $ anySingle `manyTill` end
   where
     end = choice $ op TSemicolon : (lookAhead . kw <$> [TClass, TFun, TVar, TFor, TIf, TWhile, TPrint, TReturn])
 
 program :: Parser [Stmt]
-program = many declaration <?> "declarations"
+program = (many declaration <?> "declarations") <* eof
 
 -- AST pretty printing.
 
