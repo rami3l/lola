@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-19.11
+resolver: nightly-2022-06-06
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -40,6 +40,7 @@ packages:
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
 extra-deps:
+  - relude-1.1.0.0@sha256:fe82b67d4560b9eff8d7dd12c5e1f786b25d52d64f7302ad82a3bbec9a0bd55e,11747
   - diagnose-2.0.0@sha256:fdd95a13cdb49465f1bd178827cc1090cde1493599c07673acb3e15e517731f5,5721
 # Override default flag values for local packages and extra-deps
 # flags: {}

@@ -44,11 +44,16 @@ library
       FlexibleInstances
       FunctionalDependencies
       GADTs
+      GHC2021
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      NoStarIsType
       OverloadedLabels
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
@@ -95,11 +100,16 @@ executable lola-exe
       FlexibleInstances
       FunctionalDependencies
       GADTs
+      GHC2021
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      NoStarIsType
       OverloadedLabels
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
@@ -150,11 +160,16 @@ test-suite lola-test
       FlexibleInstances
       FunctionalDependencies
       GADTs
+      GHC2021
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      NoStarIsType
       OverloadedLabels
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds

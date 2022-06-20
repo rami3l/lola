@@ -18,7 +18,7 @@ import Data.Char (isDigit, toLower)
 import qualified Data.Map.Strict as Map
 import Data.String.Interpolate
 import qualified Data.Text as Text
-import Optics (makeFieldLabels, (^.))
+import Optics (makeFieldLabelsNoPrefix, (^.))
 import Relude
 import Text.Megaparsec
   ( MonadParsec (eof, hidden, label, lookAhead, notFollowedBy, takeWhileP, try, withRecovery),
@@ -142,13 +142,13 @@ data TokenType
   deriving (Show, Ord, Eq)
 
 data Token = Token
-  { tokenType :: TokenType,
-    tokenLexeme :: Text,
-    tokenPos :: SourcePos
+  { type_ :: TokenType,
+    lexeme :: Text,
+    pos :: SourcePos
   }
   deriving (Eq)
 
-makeFieldLabels ''Token
+makeFieldLabelsNoPrefix ''Token
 
 instance Prelude.Show Token where show = toString . (^. #lexeme)
 
@@ -291,7 +291,7 @@ primary =
       kw TThis <&> EThis,
       ELambda <$> (kw TFun *> paramList) <*> rawBlock,
       numLit <&> ELiteral . LNum . read . toString . (^. #lexeme),
-      strLit <&> ELiteral . LStr . tokenLexeme,
+      strLit <&> ELiteral . LStr . (^. #lexeme),
       ident <&> EVariable,
       expression & between (op TLParen) (op TRParen) <&> EGrouping,
       ESuper <$> kw TSuper <*> (op TDot *> ident)
@@ -430,7 +430,7 @@ instance Prelude.Show Expr where
   show (ESuper _ method) = [i|(. (super) #{method})|]
   show (EThis _) = "(this)"
   show (EUnary op' rhs) = [i|(#{op'} #{rhs})|]
-  show (EVariable var) = var & tokenLexeme & toString
+  show (EVariable var) = var & (^. #lexeme) & toString
 
 instance Prelude.Show Stmt where
   show (SBlock stmts) = [i|(begin #{intercalateS' stmts})|]
