@@ -13,12 +13,11 @@ module Lola.Parser
 where
 
 import Data.Bimap (Bimap)
-import qualified Data.Bimap as Bimap
+import Data.Bimap qualified as Bimap
 import Data.Char (isDigit, toLower)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.String.Interpolate
-import qualified Data.Text as Text
-import Optics (makeFieldLabelsNoPrefix, (^.))
+import Data.Text qualified as Text
 import Relude
 import Text.Megaparsec
   ( MonadParsec (eof, hidden, label, lookAhead, notFollowedBy, takeWhileP, try, withRecovery),
@@ -44,9 +43,9 @@ import Text.Megaparsec.Char
     space1,
     string,
   )
-import qualified Text.Megaparsec.Char.Lexer as L
+import Text.Megaparsec.Char.Lexer qualified as L
 import Prelude (read)
-import qualified Prelude
+import Prelude qualified
 
 kws :: Bimap TokenType Text
 kws =
@@ -148,9 +147,7 @@ data Token = Token
   }
   deriving (Eq)
 
-makeFieldLabelsNoPrefix ''Token
-
-instance Prelude.Show Token where show = toString . (^. #lexeme)
+instance Prelude.Show Token where show = toString . (.lexeme)
 
 type ParserError = Void
 
@@ -179,7 +176,7 @@ toTokenParser :: TokenType -> Parser Text -> Parser Token
 toTokenParser tkType str = do
   pos <- getSourcePos
   str' <- str
-  return $ Token tkType str' pos
+  pure $ Token tkType str' pos
 
 -- | A reserved keyword in the Lox language.
 rword :: TokenType -> Text -> Parser Token
@@ -207,7 +204,7 @@ ident = toTokenParser TIdent ident' <?> "identifier"
     check str =
       if str `Bimap.memberR` kws
         then fail [i|keyword `#{str}` cannot be an identifier|]
-        else return str
+        else pure str
 
 strLit :: Parser Token
 strLit = toTokenParser TStrLit $ toText <$> (doubleQuote *> L.charLiteral `manyTill` doubleQuote)
@@ -220,7 +217,7 @@ numLit = label "number literal" $ lexeme do
   car <- digits
   Token TDecimalLit car pos `option` hidden do
     cdr <- char '.' *> digits
-    return $ Token TFloatLit [i|#{car}.#{cdr}|] pos
+    pure $ Token TFloatLit [i|#{car}.#{cdr}|] pos
 
 digits :: Parser Text
 digits = Text.cons <$> (satisfy isDigit <?> "digit") <*> hidden (takeWhileP Nothing isDigit)
@@ -290,8 +287,8 @@ primary =
       kw TNil $> ELiteral LNil,
       kw TThis <&> EThis,
       ELambda <$> (kw TFun *> paramList) <*> rawBlock,
-      numLit <&> ELiteral . LNum . read . toString . (^. #lexeme),
-      strLit <&> ELiteral . LStr . (^. #lexeme),
+      numLit <&> ELiteral . LNum . read . toString . (.lexeme),
+      strLit <&> ELiteral . LStr . (.lexeme),
       ident <&> EVariable,
       expression & between (op TLParen) (op TRParen) <&> EGrouping,
       ESuper <$> kw TSuper <*> (op TDot *> ident)
@@ -352,7 +349,7 @@ forStmt = label "for statement" do
   body <- statement <?> "body"
   let body' = SBlock . catMaybes $ [Just body, SExpr <$> incr]
   let while' = SWhile (cond & fromMaybe (ELiteral $ LBool True)) body'
-  return . SBlock . catMaybes $ [init', Just while']
+  pure . SBlock . catMaybes $ [init', Just while']
 ifStmt =
   SIf
     <$> (kw TIf *> between (op TLParen) (op TRParen) (expression <?> "condition"))
@@ -430,7 +427,7 @@ instance Prelude.Show Expr where
   show (ESuper _ method) = [i|(. (super) #{method})|]
   show (EThis _) = "(this)"
   show (EUnary op' rhs) = [i|(#{op'} #{rhs})|]
-  show (EVariable var) = var & (^. #lexeme) & toString
+  show (EVariable var) = var & (.lexeme) & toString
 
 instance Prelude.Show Stmt where
   show (SBlock stmts) = [i|(begin #{intercalateS' stmts})|]
