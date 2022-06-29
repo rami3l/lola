@@ -3,7 +3,10 @@ module Lola
   )
 where
 
+import Language.C.Inline qualified as C
 import Relude
 
+C.include "Lola/vm.h"
+
 someFunc :: IO ()
-someFunc = putStrLn "Hello from Lola!"
+someFunc = [C.exp| void { greet() } |]

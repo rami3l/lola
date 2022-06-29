@@ -63,6 +63,7 @@ dependencies:
   - bimap
   - diagnose
   - extra
+  - inline-c
   - megaparsec
   - optics
   - raw-strings-qq
@@ -75,6 +76,7 @@ ghc-options:
 
 library:
   source-dirs: src
+  c-sources: src/**/*.c
 
 executables:
   lola-exe:

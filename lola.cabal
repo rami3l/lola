@@ -68,11 +68,14 @@ library
       TypeOperators
       UndecidableInstances
   ghc-options: -Wall
+  c-sources:
+      src/Lola/vm.c
   build-depends:
       base >=4.7 && <5
     , bimap
     , diagnose
     , extra
+    , inline-c
     , megaparsec
     , optics
     , raw-strings-qq
@@ -129,6 +132,7 @@ executable lola-exe
     , bimap
     , diagnose
     , extra
+    , inline-c
     , lola
     , megaparsec
     , optics
@@ -191,6 +195,7 @@ test-suite lola-test
     , bimap
     , diagnose
     , extra
+    , inline-c
     , lola
     , megaparsec
     , optics
