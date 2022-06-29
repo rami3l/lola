@@ -224,9 +224,9 @@ digits = Text.cons <$> (satisfy isDigit <?> "digit") <*> hidden (takeWhileP Noth
 
 data Lit
   = LNil
-  | LBool Bool
-  | LNum Double
-  | LStr Text
+  | LBool !Bool
+  | LNum !Double
+  | LStr !Text
 
 instance Prelude.Show Lit where
   show LNil = "nil"
@@ -242,37 +242,37 @@ showRealFrac n =
    in if fl == ceiling n then show fl else show n
 
 data Expr
-  = EAssign {assignName :: Token, assignVal :: Expr}
-  | EBinary {lhs :: Expr, binOp :: Token, rhs :: Expr}
-  | ECall {callee :: Expr, callArgs :: [Expr], callEnd :: Token}
-  | EGet {getFrom :: Expr, getAttr :: Token}
+  = EAssign {name :: !Token, val :: Expr}
+  | EBinary {lhs :: Expr, op :: !Token, rhs :: Expr}
+  | ECall {callee :: Expr, args :: [Expr], end :: !Token}
+  | EGet {from :: Expr, attr :: !Token}
   | EGrouping Expr
-  | ELambda {lambdaParams :: [Token], lambdaBody :: [Stmt]}
-  | ELiteral Lit
-  | ELogical {lhs :: Expr, binOp :: Token, rhs :: Expr}
-  | ESet {setName :: Expr, setAttr :: Token, setVal :: Expr}
-  | ESuper {superKw :: Token, superMethod :: Token}
-  | EThis Token
-  | EUnary {unOp :: Token, rhs :: Expr}
-  | EVariable Token
+  | ELambda {params :: ![Token], body :: [Stmt]}
+  | ELiteral !Lit
+  | ELogical {lhs :: Expr, op :: !Token, rhs :: Expr}
+  | ESet {target :: Expr, attr :: !Token, val :: Expr}
+  | ESuper {kw :: !Token, method :: !Token}
+  | EThis !Token
+  | EUnary {op :: !Token, rhs :: Expr}
+  | EVariable !Token
 
 data Stmt
-  = SBlock [Stmt]
+  = SBlock !([Stmt])
   | SClass
-      { className :: Token,
+      { className :: !Token,
         -- | Note: This field /must/ contain an instance of 'EVariable'.
         classSuper :: Maybe Expr,
         -- | Note: This field /must/ only contain instances of 'SFunDecl'
         classMethods :: [Stmt]
       }
   | SExpr Expr
-  | SFunDecl {funName :: Token, funParams :: [Token], funBody :: [Stmt]}
-  | SIf {ifCond :: Expr, ifThen :: Stmt, ifElse :: Maybe Stmt}
-  | SJump Token
+  | SFunDecl {name :: !Token, params :: ![Token], body :: [Stmt]}
+  | SIf {cond :: Expr, then_ :: Stmt, else_ :: Maybe Stmt}
+  | SJump !Token
   | SPrint Expr
-  | SReturn {returnKw :: Token, returnVal :: Maybe Expr}
-  | SVarDecl {varName :: Token, varInit :: Maybe Expr}
-  | SWhile {whileCond :: Expr, whileBody :: Stmt}
+  | SReturn {kw :: !Token, val :: Maybe Expr}
+  | SVarDecl {name :: !Token, init :: Maybe Expr}
+  | SWhile {cond :: Expr, then_ :: Stmt}
   | SError
 
 -- Grammar reference: https://craftinginterpreters.com/appendix-i.html
