@@ -1,15 +1,20 @@
-module Lola.Chunk () where
+module Lola.Chunk (Chunk, OpCode, Value) where
 
+import Optics (makeFieldLabelsNoPrefix)
 import Relude
 
-data Value
-  = VBool Bool
-  | VBoundMethod (IORef BoundMethod)
-  | VClass (IORef Class)
-  | VClosure (IORef Closure)
-  | VFunc (IORef Func)
-  | VInstance (IORef Instance)
-  | VNativeFunc (NativeFunc)
-  | VNil
-  | VNum Double
-  | VStr Text
+data OpCode
+  = OpConst
+  | OpNeg
+  | OpReturn
+
+type Value = Double
+
+data Chunk = Chunk
+  { -- | A list of all bytecode bytes, followed by line numbers,
+    code :: Seq (Word, Word8),
+    -- | The constant pool.
+    consts :: Seq Value
+  }
+
+makeFieldLabelsNoPrefix ''Chunk

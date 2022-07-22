@@ -1,27 +1,27 @@
 module Lola.VM () where
 
+import Data.Sequence qualified as Sequence
+import Lola.Chunk
+import Optics (Field2 (_2), Ixed (ix), makeFieldLabelsNoPrefix, (^.))
 import Relude
+
+data InterpretError = CompileError !Text | RuntimeError !Text
 
 -- The Lox Virtual Machine.
 data VM = VM
-  { frames :: Seq CallFrame,
-    stack :: Seq Value,
-    globals :: Table,
-    strings :: Table,
-    openUpvalues :: Seq (IORef Upvalue),
-    initString :: IORef String
+  { chunk :: IORef Chunk,
+    ip :: Word,
+    stack :: Seq Value
   }
 
-data Closure = Closure -- TODO: FINISH THIS
+makeFieldLabelsNoPrefix ''VM
 
-data CallFrame = CallFrame
-  { -- | The active function call.
-    closure :: IORef Closure,
-    -- | The Program Counter.
-    pc :: Int,
-    -- | The first VM stack slot that this function can use.
-    slot :: Int
-  }
-
-callFrame :: IORef Closure -> Int -> CallFrame
-callFrame closure slot = CallFrame closure 0 slot
+vm :: IORef Chunk -> IO VM
+vm chunkRef = do
+  chunk <- chunkRef & readIORef
+  pure
+    VM
+      { chunk = chunkRef,
+        ip = chunk ^. #code ^. (ix 0) ^. _2,
+        stack = Sequence.empty
+      }

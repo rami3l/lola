@@ -42,8 +42,6 @@ default-extensions:
   - NoImplicitPrelude # https://github.com/commercialhaskell/stack/issues/5077
   - NoStarIsType
   - OverloadedLabels
-  - OverloadedRecordDot
-  - OverloadedRecordUpdate
   - OverloadedStrings
   - PatternSynonyms
   - PolyKinds

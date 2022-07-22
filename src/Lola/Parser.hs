@@ -18,6 +18,7 @@ import Data.Char (isDigit, toLower)
 import Data.Map.Strict qualified as Map
 import Data.String.Interpolate
 import Data.Text qualified as Text
+import Optics (makeFieldLabelsNoPrefix, (^.))
 import Relude
 import Text.Megaparsec
   ( MonadParsec (eof, hidden, label, lookAhead, notFollowedBy, takeWhileP, try, withRecovery),
@@ -147,7 +148,9 @@ data Token = Token
   }
   deriving (Eq)
 
-instance Prelude.Show Token where show = toString . (.lexeme)
+makeFieldLabelsNoPrefix ''Token
+
+instance Prelude.Show Token where show = toString . (^. #lexeme)
 
 type ParserError = Void
 
@@ -275,6 +278,9 @@ data Stmt
   | SWhile {cond :: Expr, then_ :: Stmt}
   | SError
 
+makeFieldLabelsNoPrefix ''Expr
+makeFieldLabelsNoPrefix ''Stmt
+
 -- Grammar reference: https://craftinginterpreters.com/appendix-i.html
 
 -- Expressions:
@@ -287,8 +293,8 @@ primary =
       kw TNil $> ELiteral LNil,
       kw TThis <&> EThis,
       ELambda <$> (kw TFun *> paramList) <*> rawBlock,
-      numLit <&> ELiteral . LNum . read . toString . (.lexeme),
-      strLit <&> ELiteral . LStr . (.lexeme),
+      numLit <&> ELiteral . LNum . read . toString . (^. #lexeme),
+      strLit <&> ELiteral . LStr . (^. #lexeme),
       ident <&> EVariable,
       expression & between (op TLParen) (op TRParen) <&> EGrouping,
       ESuper <$> kw TSuper <*> (op TDot *> ident)
@@ -427,7 +433,7 @@ instance Prelude.Show Expr where
   show (ESuper _ method) = [i|(. (super) #{method})|]
   show (EThis _) = "(this)"
   show (EUnary op' rhs) = [i|(#{op'} #{rhs})|]
-  show (EVariable var) = var & (.lexeme) & toString
+  show (EVariable var) = var & (^. #lexeme) & toString
 
 instance Prelude.Show Stmt where
   show (SBlock stmts) = [i|(begin #{intercalateS' stmts})|]

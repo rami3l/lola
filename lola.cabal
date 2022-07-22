@@ -54,8 +54,6 @@ library
       NoImplicitPrelude
       NoStarIsType
       OverloadedLabels
-      OverloadedRecordDot
-      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
@@ -110,8 +108,6 @@ executable lola-exe
       NoImplicitPrelude
       NoStarIsType
       OverloadedLabels
-      OverloadedRecordDot
-      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
@@ -170,8 +166,6 @@ test-suite lola-test
       NoImplicitPrelude
       NoStarIsType
       OverloadedLabels
-      OverloadedRecordDot
-      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
