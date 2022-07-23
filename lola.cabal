@@ -78,6 +78,7 @@ library
     , raw-strings-qq
     , relude
     , string-interpolate
+    , unliftio
     , witch
   default-language: Haskell2010
 
@@ -133,6 +134,7 @@ executable lola-exe
     , raw-strings-qq
     , relude
     , string-interpolate
+    , unliftio
     , witch
   default-language: Haskell2010
 
@@ -198,5 +200,6 @@ test-suite lola-test
     , tasty-hunit
     , tasty-quickcheck
     , tasty-smallcheck
+    , unliftio
     , witch
   default-language: Haskell2010

@@ -1,27 +1,39 @@
 module Lola.VM () where
 
+import Control.Exception (mapException)
+import Data.Maybe (fromJust)
 import Data.Sequence qualified as Sequence
-import Lola.Chunk
-import Optics (Field2 (_2), Ixed (ix), makeFieldLabelsNoPrefix, (^.))
+import Lola.Chunk (Chunk (..), Value)
+import Optics (makeFieldLabelsNoPrefix, (%!~))
 import Relude
+import UnliftIO (MonadUnliftIO, mapExceptionM, onException, throwIO)
 
-data InterpretError = CompileError !Text | RuntimeError !Text
+data CompileError = CompileError !Text
+
+data RuntimeException = RuntimeException !Text deriving (Show, Typeable)
+
+instance Exception RuntimeException
 
 -- The Lox Virtual Machine.
 data VM = VM
   { chunk :: IORef Chunk,
-    ip :: Word,
+    ip :: Int,
     stack :: Seq Value
   }
 
 makeFieldLabelsNoPrefix ''VM
 
-vm :: IORef Chunk -> IO VM
-vm chunkRef = do
-  chunk <- chunkRef & readIORef
-  pure
-    VM
-      { chunk = chunkRef,
-        ip = chunk ^. #code ^. (ix 0) ^. _2,
-        stack = Sequence.empty
-      }
+vm :: MonadUnliftIO m => IORef Chunk -> m (IORef VM)
+vm chunk = newIORef VM {chunk, ip = 0, stack = Sequence.empty}
+
+execVM :: MonadUnliftIO m => IORef VM -> m ()
+execVM vmRef = do
+  VM {chunk = chunkRef, ip} <- vmRef & readIORef
+  Chunk {code} <- chunkRef & readIORef
+  (ln, byte) <-
+    (pure $ code Sequence.!? ip & fromJust)
+      & onException (throwIO $ RuntimeException "ip out of range")
+  -- Increment @ip@.
+  vmRef `modifyIORef'` (#ip %!~ succ)
+  -- TODO
+  undefined

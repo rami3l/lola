@@ -1,4 +1,4 @@
-module Lola.Chunk (Chunk, OpCode, Value) where
+module Lola.Chunk (Chunk (..), OpCode (..), Value) where
 
 import Optics (makeFieldLabelsNoPrefix)
 import Relude
@@ -12,7 +12,7 @@ type Value = Double
 
 data Chunk = Chunk
   { -- | A list of all bytecode bytes, followed by line numbers,
-    code :: Seq (Word, Word8),
+    code :: Seq (Int, Word8),
     -- | The constant pool.
     consts :: Seq Value
   }

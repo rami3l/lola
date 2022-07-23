@@ -67,6 +67,7 @@ dependencies:
   - relude
   - string-interpolate
   - witch
+  - unliftio
 
 ghc-options:
   - -Wall
