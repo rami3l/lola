@@ -19,7 +19,7 @@ extra-source-files:
 # common to point users to the README.md file.
 description: Please see the README on GitHub at <https://github.com/rami3l/lola#readme>
 
-# language: GHC2021
+language: GHC2021
 
 default-extensions:
   - AllowAmbiguousTypes
@@ -34,7 +34,6 @@ default-extensions:
   - FlexibleInstances
   - FunctionalDependencies
   - GADTs
-  - GHC2021
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
@@ -43,7 +42,7 @@ default-extensions:
   - NoStarIsType
   - OverloadedLabels
   - OverloadedRecordDot
-  - OverloadedRecordUpdate
+  # - OverloadedRecordUpdate
   - OverloadedStrings
   - PatternSynonyms
   - PolyKinds

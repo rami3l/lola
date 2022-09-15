@@ -257,13 +257,13 @@ data Expr
   | EVariable !Token
 
 data Stmt
-  = SBlock !([Stmt])
+  = SBlock ![Stmt]
   | SClass
-      { className :: !Token,
+      { name :: !Token,
         -- | Note: This field /must/ contain an instance of 'EVariable'.
-        classSuper :: Maybe Expr,
+        super :: Maybe Expr,
         -- | Note: This field /must/ only contain instances of 'SFunDecl'
-        classMethods :: [Stmt]
+        methods :: [Stmt]
       }
   | SExpr Expr
   | SFunDecl {name :: !Token, params :: ![Token], body :: [Stmt]}
@@ -342,7 +342,8 @@ exprStmt = expression <* op TSemicolon <&> SExpr <?> "expression statement"
 -- for (init; cond; incr) body => { init; while (cond) { body incr; } }
 forStmt = label "for statement" do
   init' <-
-    kw TFor *> op TLParen
+    kw TFor
+      *> op TLParen
       *> (Just <$> (varDecl <|> exprStmt) <|> Nothing <$ op TSemicolon <?> "initialization")
   cond <- (optional expression <?> "condition") <* op TSemicolon
   incr <- (optional expression <?> "incrementation") <* op TRParen
@@ -382,7 +383,8 @@ classDecl =
     <?> "class declaration"
 funDecl = kw TFun *> rawFunDecl
 rawFunDecl =
-  SFunDecl <$> (ident <?> "function name")
+  SFunDecl
+    <$> (ident <?> "function name")
     <*> paramList
     <*> (rawBlock <?> "function body")
     <?> "function declaration"
@@ -448,6 +450,6 @@ prependS :: Show a => Maybe a -> String
 prependS = foldMap \s -> " " <> show s
 
 intercalateS, intercalateS' :: Show a => [a] -> String
-intercalateS = intercalate " " . fmap show
+intercalateS = Prelude.unwords . fmap show
 intercalateS' [] = "'()"
 intercalateS' ts = intercalateS ts
