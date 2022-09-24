@@ -257,7 +257,7 @@ data Expr
   | EVariable !Token
 
 data Stmt
-  = SBlock ![Stmt]
+  = SBlock [Stmt]
   | SClass
       { name :: !Token,
         -- | Note: This field /must/ contain an instance of 'EVariable'.

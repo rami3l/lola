@@ -30,7 +30,9 @@ test_arithmetic :: TestTree
 test_arithmetic =
   testGroup
     "Should parse arithmetic expressions"
-    [ testCase "with precedence" $
+    [ testCase "with many operators of the same level" $
+        "1+2-3+4" `assertExpr` "(+ (- (+ 1 2) 3) 4)",
+      testCase "with precedence" $
         "1+2 / 3- 4 *-5.678" `assertExpr` "(- (+ 1 (/ 2 3)) (* 4 (- 5.678)))",
       testCase "with missing unary operand" $
         "-" `assertExprError` "expecting operand$",
