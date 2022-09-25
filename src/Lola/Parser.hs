@@ -207,8 +207,9 @@ ident = toTokenParser TIdent ident' <?> "identifier"
         else pure str
 
 strLit :: Parser Token
-strLit = toTokenParser TStrLit $ toText <$> (doubleQuote *> L.charLiteral `manyTill` doubleQuote)
+strLit = toTokenParser TStrLit strLit' <?> "string literal"
   where
+    strLit' = lexeme $ toText <$> (doubleQuote *> L.charLiteral `manyTill` doubleQuote)
     doubleQuote = char '"'
 
 numLit :: Parser Token
